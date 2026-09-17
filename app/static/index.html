@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aurani 2.0 • Sistema Inteligente de Fábrica e Inventario</title>
+  <!-- Tailwind CSS & FontAwesome CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #F9F0F7 0%, #FCF7FA 50%, #E8F5E9 100%);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+    .text-aurani-magenta { color: #C2185B; }
+    .text-aurani-green { color: #7BC600; }
+    .bg-aurani-magenta { background-color: #C2185B; }
+    .bg-aurani-green { background-color: #7BC600; }
+    .border-aurani-magenta { border-color: #C2185B; }
+    
+    .card-aurani {
+      background: #FFFFFF;
+      border-radius: 20dp;
+      box-shadow: 0 10px 25px -5px rgba(194, 24, 91, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+      border: 1px solid rgba(194, 24, 91, 0.1);
+    }
+    
+    @media print {
+      header, .no-print, button, #alerts-container, .border-b { display: none !important; }
+      body { background: white !important; font-size: 11pt; }
+      .card-aurani { border: none !important; box-shadow: none !important; }
+      table { width: 100% !important; border-collapse: collapse !important; }
+      th, td { border: 1px solid #ddd !important; padding: 6px !important; }
+    }
+  </style>
+</head>
+<body class="min-h-screen text-slate-800 flex flex-col">
+
+  <!-- Header / Navigation con Estilo Aurani -->
+  <header class="bg-white/90 backdrop-blur-md border-b border-rose-100 sticky top-0 z-50 px-6 py-4 flex flex-wrap justify-between items-center shadow-sm">
+    <div class="flex items-center space-x-3">
+      <div class="w-11 h-11 rounded-xl bg-gradient-to-tr from-pink-600 to-rose-500 flex items-center justify-center text-white text-xl font-bold shadow-md shadow-pink-500/20">
+        <i class="fa-solid fa-leaf"></i>
+      </div>
+      <div>
+        <h1 class="text-xl font-extrabold tracking-wide text-aurani-magenta">AURANI <span class="text-xs font-semibold px-2 py-0.5 rounded bg-pink-100 text-aurani-magenta ml-1">FÁBRICA 2.0</span></h1>
+        <p class="text-xs text-slate-500 font-medium">Sistema de Gestión de Insumos, Cotizaciones e IA • Conectado a Android App</p>
+      </div>
+    </div>
+
+    <!-- Badges de Estado -->
+    <div class="flex items-center space-x-4 mt-3 sm:mt-0 text-xs font-semibold">
+      <div class="px-3.5 py-2 rounded-xl bg-pink-50 text-aurani-magenta border border-pink-100 flex items-center space-x-2">
+        <i class="fa-solid fa-boxes-stacked"></i>
+        <span>Productos: <strong id="stat-products" class="text-slate-900 text-sm ml-1">0</strong></span>
+      </div>
+      <div class="px-3.5 py-2 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 flex items-center space-x-2">
+        <i class="fa-solid fa-bell text-amber-500"></i>
+        <span>Alertas Stock: <strong id="stat-alerts" class="text-amber-700 text-sm ml-1">0</strong></span>
+      </div>
+      <div class="px-3.5 py-2 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center space-x-2">
+        <i class="fa-solid fa-robot text-aurani-green"></i>
+        <span>Cotizaciones IA: <strong id="stat-quotes" class="text-emerald-800 text-sm ml-1">0</strong></span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Contenedor Principal -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-6 space-y-6">
+
+    <!-- Alertas Activas Banner -->
+    <div id="alerts-container" class="hidden space-y-2"></div>
+
+    <!-- Pestañas de Navegación -->
+    <div class="border-b border-pink-200 flex space-x-8 text-sm font-bold">
+      <button onclick="switchTab('tab-inventory')" id="btn-inventory" class="pb-3 border-b-2 border-aurani-magenta text-aurani-magenta flex items-center space-x-2">
+        <i class="fa-solid fa-boxes-stacked"></i>
+        <span>Inventario y Control de Stock</span>
+      </button>
+      <button onclick="switchTab('tab-ai')" id="btn-ai" class="pb-3 border-b-2 border-transparent text-slate-500 hover:text-aurani-magenta flex items-center space-x-2">
+        <i class="fa-solid fa-wand-magic-sparkles text-aurani-green"></i>
+        <span>Ingesta de Cotizaciones con IA</span>
+      </button>
+      <button onclick="switchTab('tab-audit')" id="btn-audit" class="pb-3 border-b-2 border-transparent text-slate-500 hover:text-aurani-magenta flex items-center space-x-2">
+        <i class="fa-solid fa-clock-rotate-left text-indigo-500"></i>
+        <span>Historial de Auditoría y Usuarios</span>
+      </button>
+    </div>
+
+    <!-- PESTAÑA 1: INVENTARIO -->
+    <section id="tab-inventory" class="space-y-6">
+      <div class="flex justify-between items-center flex-wrap gap-4">
+        <div>
+          <h2 class="text-lg font-bold text-slate-800">Catálogo General de Insumos</h2>
+          <p class="text-xs text-slate-500">Monitoreo en tiempo real sincronizado con la App Android y base de datos Node.js.</p>
+        </div>
+        <div class="flex items-center space-x-2 no-print">
+          <button onclick="exportProductsCSV()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20 flex items-center space-x-2">
+            <i class="fa-solid fa-file-excel"></i>
+            <span>Exportar Excel (CSV)</span>
+          </button>
+          <button onclick="printInventoryReport()" class="px-3.5 py-2 bg-slate-700 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-md flex items-center space-x-2">
+            <i class="fa-solid fa-file-pdf"></i>
+            <span>Imprimir / PDF</span>
+          </button>
+          <button onclick="openAddProductModal()" class="px-4 py-2 bg-aurani-magenta hover:bg-pink-700 text-white rounded-xl text-xs font-bold shadow-md shadow-pink-600/20 flex items-center space-x-2">
+            <i class="fa-solid fa-plus"></i>
+            <span>Agregar Nuevo Insumo</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Tabla de Inventario -->
+      <div class="card-aurani overflow-hidden shadow-sm">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm text-slate-700">
+            <thead class="bg-pink-50/60 text-xs uppercase tracking-wider text-aurani-magenta border-b border-pink-100 font-bold">
+              <tr>
+                <th class="px-5 py-3.5">SKU</th>
+                <th class="px-5 py-3.5">Producto / Insumo</th>
+                <th class="px-5 py-3.5">Categoría</th>
+                <th class="px-5 py-3.5 text-center">Stock Actual</th>
+                <th class="px-5 py-3.5 text-center">Stock Mínimo</th>
+                <th class="px-5 py-3.5 text-right">Precio Unitario</th>
+                <th class="px-5 py-3.5 text-center">Estado</th>
+                <th class="px-5 py-3.5 text-center">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="products-table-body" class="divide-y divide-pink-50">
+              <!-- JS Render -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- PESTAÑA 2: INGESTA IA -->
+    <section id="tab-ai" class="hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <div class="lg:col-span-5 card-aurani p-6 space-y-4">
+          <div class="flex items-center space-x-3 border-b border-pink-100 pb-4">
+            <div class="p-3 rounded-xl bg-pink-100 text-aurani-magenta">
+              <i class="fa-solid fa-robot text-2xl"></i>
+            </div>
+            <div>
+              <h2 class="text-base font-bold text-slate-800">Procesar Cotización con IA</h2>
+              <p class="text-xs text-slate-500">Extracción automática de insumos y precios sin captura manual.</p>
+            </div>
+          </div>
+
+          <form id="form-quote" onsubmit="handleQuoteSubmit(event)" class="space-y-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">Proveedor / Empresa</label>
+              <input type="text" id="quote-supplier" required placeholder="Ej: Aceros del Norte S.A." class="w-full px-3.5 py-2.5 bg-slate-50 border border-pink-200 rounded-xl text-sm focus:outline-none focus:border-aurani-magenta">
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">Texto del Correo / Cotización o PDF</label>
+              <textarea id="quote-text" rows="6" required placeholder="Pega aquí la cotización recibida por correo del proveedor..." class="w-full px-3.5 py-2.5 bg-slate-50 border border-pink-200 rounded-xl text-xs font-mono focus:outline-none focus:border-aurani-magenta"></textarea>
+            </div>
+
+            <button type="submit" id="btn-process-ai" class="w-full py-3 bg-gradient-to-r from-pink-600 to-aurani-magenta hover:from-pink-700 hover:to-pink-800 text-white font-bold rounded-xl shadow-lg shadow-pink-500/20 flex items-center justify-center space-x-2 text-sm">
+              <i class="fa-solid fa-wand-magic-sparkles"></i>
+              <span>Procesar con IA de Aurani</span>
+            </button>
+          </form>
+        </div>
+
+        <div class="lg:col-span-7 space-y-4">
+          <h2 class="text-base font-bold text-slate-800 flex items-center space-x-2">
+            <i class="fa-solid fa-list-check text-aurani-magenta"></i>
+            <span>Cotizaciones Procesadas y Resúmenes Ejecutivos</span>
+          </h2>
+
+          <div id="quotes-list-container" class="space-y-4 max-h-[550px] overflow-y-auto pr-1">
+            <!-- JS Render -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PESTAÑA 3: AUDITORÍA -->
+    <section id="tab-audit" class="hidden space-y-6">
+      <div class="flex justify-between items-center flex-wrap gap-4">
+        <div>
+          <h2 class="text-lg font-bold text-slate-800">Historial de Auditoría e Inspección de Usuarios</h2>
+          <p class="text-xs text-slate-500">Registro inalterable de ediciones de productos, ingresos de la App Android e Ingestas.</p>
+        </div>
+        <button onclick="exportAuditCSV()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/20 flex items-center space-x-2 no-print">
+          <i class="fa-solid fa-file-csv"></i>
+          <span>Exportar Auditoría (CSV)</span>
+        </button>
+      </div>
+
+      <div class="card-aurani overflow-hidden shadow-sm">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm text-slate-700">
+            <thead class="bg-pink-50/60 text-xs uppercase tracking-wider text-aurani-magenta border-b border-pink-100 font-bold">
+              <tr>
+                <th class="px-4 py-3">ID Log</th>
+                <th class="px-4 py-3">Fecha / Hora</th>
+                <th class="px-4 py-3">Usuario / Dispositivo</th>
+                <th class="px-4 py-3">Acción</th>
+                <th class="px-4 py-3">Entidad</th>
+                <th class="px-4 py-3">Detalle del Cambio</th>
+              </tr>
+            </thead>
+            <tbody id="audit-table-body" class="divide-y divide-pink-50">
+              <!-- JS Render -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Modal Agregar Producto -->
+  <div id="add-modal" class="fixed inset-0 bg-black/40 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4">
+    <div class="bg-white border border-pink-100 rounded-2xl p-6 max-w-md w-full space-y-4 shadow-2xl">
+      <h3 class="text-lg font-bold text-aurani-magenta flex items-center space-x-2">
+        <i class="fa-solid fa-plus-circle"></i>
+        <span>Agregar Nuevo Insumo</span>
+      </h3>
+
+      <form id="add-product-form" onsubmit="handleAddSubmit(event)" class="space-y-3">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-600">SKU / Código</label>
+            <input type="text" id="add-prod-sku" required placeholder="Ej: MAT-005" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-600">Categoría</label>
+            <input type="text" id="add-prod-category" required placeholder="Ej: Materias Primas" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-600">Nombre del Producto</label>
+          <input type="text" id="add-prod-name" required placeholder="Ej: Lámina de Aluminio 2mm" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-600">Stock Inicial</label>
+            <input type="number" step="0.1" id="add-prod-stock" value="10" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-600">Stock Mínimo</label>
+            <input type="number" step="0.1" id="add-prod-min" value="5" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-600">Precio Unitario ($ MXN)</label>
+          <input type="number" step="0.01" id="add-prod-price" value="0.00" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-aurani-magenta">Nombre de Usuario (Para Registro de Auditoría)</label>
+          <input type="text" id="add-user-name" value="Ing. Alejandra Alvarado Reyes (Administración)" placeholder="Ing. Alejandra Alvarado Reyes" required class="w-full px-3 py-2 bg-pink-50 border border-pink-200 rounded-xl text-sm font-semibold">
+        </div>
+
+        <div class="flex justify-end space-x-3 pt-2">
+          <button type="button" onclick="closeAddModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-xs font-bold text-slate-600">Cancelar</button>
+          <button type="button" onclick="saveNewProduct()" class="px-4 py-2 bg-aurani-magenta hover:bg-pink-700 text-white rounded-xl text-xs font-bold shadow-md shadow-pink-500/20">Crear Insumo</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Editar Producto -->
+  <div id="edit-modal" class="fixed inset-0 bg-black/40 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4">
+    <div class="bg-white border border-pink-100 rounded-2xl p-6 max-w-md w-full space-y-4 shadow-2xl">
+      <h3 class="text-lg font-bold text-aurani-magenta flex items-center space-x-2">
+        <i class="fa-solid fa-pen-to-square"></i>
+        <span>Editar Insumo / Stock</span>
+      </h3>
+
+      <form id="edit-product-form" onsubmit="handleEditSubmit(event)" class="space-y-3">
+        <input type="hidden" id="edit-prod-id">
+
+        <div>
+          <label class="block text-xs font-bold text-slate-600">Nombre del Producto</label>
+          <input type="text" id="edit-prod-name" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-600">Stock Actual</label>
+            <input type="number" step="0.1" id="edit-prod-stock" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-600">Stock Mínimo</label>
+            <input type="number" step="0.1" id="edit-prod-min" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-600">Precio Unitario ($ MXN)</label>
+          <input type="number" step="0.01" id="edit-prod-price" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-aurani-magenta">Nombre de Usuario (Para Registro de Auditoría)</label>
+          <input type="text" id="edit-user-name" value="Ing. Alejandra Alvarado Reyes (Administración)" placeholder="Ing. Alejandra Alvarado Reyes" required class="w-full px-3 py-2 bg-pink-50 border border-pink-200 rounded-xl text-sm font-semibold">
+        </div>
+
+        <div class="flex justify-end space-x-3 pt-2">
+          <button type="button" onclick="closeEditModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-xs font-bold text-slate-600">Cancelar</button>
+          <button type="submit" class="px-4 py-2 bg-aurani-magenta hover:bg-pink-700 text-white rounded-xl text-xs font-bold shadow-md shadow-pink-500/20">Guardar y Registrar Auditoría</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = (window.location.protocol === 'file:' || !window.location.host) ? 'http://localhost:8000' : '';
+    let currentProducts = [];
+
+    async function loadData() {
+      await Promise.all([fetchProducts(), fetchQuotes(), fetchAuditLogs(), fetchAlerts()]);
+    }
+
+    async function fetchProducts() {
+      const res = await fetch(API_BASE + '/api/products');
+      const data = await res.json();
+      currentProducts = data;
+      document.getElementById('stat-products').innerText = data.length;
+
+      const tbody = document.getElementById('products-table-body');
+      tbody.innerHTML = '';
+
+      data.forEach(p => {
+        const isCritical = p.stock_quantity <= p.min_stock;
+        const statusBadge = isCritical
+          ? `<span class="px-2.5 py-1 rounded-full bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold flex items-center space-x-1 justify-center"><i class="fa-solid fa-triangle-exclamation"></i><span>Stock Crítico</span></span>`
+          : `<span class="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold flex items-center space-x-1 justify-center"><i class="fa-solid fa-circle-check"></i><span>Normal</span></span>`;
+
+        tbody.innerHTML += `
+          <tr class="hover:bg-pink-50/40 transition-colors">
+            <td class="px-5 py-3.5 font-mono text-xs font-bold text-aurani-magenta">${p.sku}</td>
+            <td class="px-5 py-3.5 font-bold text-slate-800">${p.name}</td>
+            <td class="px-5 py-3.5 text-slate-500 text-xs font-semibold">${p.category}</td>
+            <td class="px-5 py-3.5 text-center font-extrabold text-base ${isCritical ? 'text-rose-600' : 'text-slate-800'}">${p.stock_quantity}</td>
+            <td class="px-5 py-3.5 text-center text-slate-400 font-semibold">${p.min_stock}</td>
+            <td class="px-5 py-3.5 text-right font-mono font-bold text-emerald-700">$${p.unit_price.toLocaleString('es-MX', {minimumFractionDigits: 2})}</td>
+            <td class="px-5 py-3.5 text-center">${statusBadge}</td>
+            <td class="px-5 py-3.5 text-center space-x-1">
+              <button onclick="openEditModal(${p.id})" class="px-3 py-1 bg-pink-50 hover:bg-pink-100 text-aurani-magenta rounded-lg text-xs font-bold border border-pink-200">
+                <i class="fa-solid fa-pen"></i> Editar
+              </button>
+              <button onclick="deleteProduct(${p.id}, '${p.name.replace(/'/g, "\\'")}')" class="px-3 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-xs font-bold border border-rose-200">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    async function deleteProduct(id, name) {
+      if (!confirm(`¿Estás seguro de eliminar el insumo "${name}"?`)) return;
+      const res = await fetch(API_BASE + `/api/products/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        await loadData();
+      }
+    }
+
+    async function fetchQuotes() {
+      const res = await fetch(API_BASE + '/api/quotes');
+      const data = await res.json();
+      document.getElementById('stat-quotes').innerText = data.length;
+
+      const container = document.getElementById('quotes-list-container');
+      container.innerHTML = '';
+
+      data.forEach(q => {
+        let itemsHtml = q.items.map(item => `
+          <div class="flex justify-between items-center text-xs py-1 border-b border-pink-50">
+            <span class="text-slate-700 font-semibold">${item.product_name} x ${item.quantity}</span>
+            <span class="font-mono text-emerald-700 font-bold">$${item.total_price.toLocaleString('es-MX', {minimumFractionDigits: 2})}</span>
+          </div>
+        `).join('');
+
+        container.innerHTML += `
+          <div class="card-aurani p-5 space-y-3">
+            <div class="flex justify-between items-start">
+              <div>
+                <span class="text-xs text-aurani-magenta font-mono font-bold">${q.quote_number || 'COT-IA'}</span>
+                <h3 class="text-base font-bold text-slate-800">${q.supplier_name}</h3>
+              </div>
+              <div class="text-right">
+                <span class="text-xs text-slate-400 font-semibold">Total Cotizado</span>
+                <p class="text-lg font-extrabold text-emerald-700 font-mono">$${q.total_amount.toLocaleString('es-MX', {minimumFractionDigits: 2})}</p>
+              </div>
+            </div>
+
+            <div class="bg-pink-50/80 border border-pink-200 rounded-xl p-3.5 text-xs text-slate-800">
+              <strong class="text-aurani-magenta flex items-center space-x-1 mb-1 font-bold">
+                <i class="fa-solid fa-robot"></i>
+                <span>Resumen de Inteligencia Artificial:</span>
+              </strong>
+              <p>${q.ai_summary}</p>
+            </div>
+
+            <div class="space-y-1">
+              <span class="text-xs text-slate-500 font-bold">Desglose de Partidas Extrapoladas:</span>
+              ${itemsHtml}
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    async function fetchAuditLogs() {
+      const res = await fetch(API_BASE + '/api/audit-logs');
+      const data = await res.json();
+      const tbody = document.getElementById('audit-table-body');
+      tbody.innerHTML = '';
+
+      data.forEach(log => {
+        const dateStr = new Date(log.timestamp).toLocaleString('es-MX');
+        tbody.innerHTML += `
+          <tr class="hover:bg-pink-50/30 text-xs">
+            <td class="px-4 py-2.5 font-mono text-slate-400">#${log.id}</td>
+            <td class="px-4 py-2.5 text-slate-500">${dateStr}</td>
+            <td class="px-4 py-2.5 font-bold text-slate-800">${log.user_name}</td>
+            <td class="px-4 py-2.5"><span class="px-2 py-0.5 rounded bg-pink-100 font-mono text-aurani-magenta font-bold">${log.action}</span></td>
+            <td class="px-4 py-2.5 text-slate-500">${log.entity_type} (${log.entity_id})</td>
+            <td class="px-4 py-2.5 text-slate-700 font-medium">${log.details}</td>
+          </tr>
+        `;
+      });
+    }
+
+    async function fetchAlerts() {
+      const res = await fetch(API_BASE + '/api/alerts');
+      const data = await res.json();
+      const pendingAlerts = data.filter(a => a.status === 'PENDIENTE');
+      document.getElementById('stat-alerts').innerText = pendingAlerts.length;
+
+      const container = document.getElementById('alerts-container');
+      if (pendingAlerts.length === 0) {
+        container.classList.add('hidden');
+        return;
+      }
+
+      container.classList.remove('hidden');
+      container.innerHTML = '';
+
+      pendingAlerts.forEach(a => {
+        container.innerHTML += `
+          <div class="p-3.5 bg-amber-50 border border-amber-200 rounded-xl flex justify-between items-center text-xs text-amber-900 shadow-sm">
+            <div class="flex items-center space-x-3">
+              <i class="fa-solid fa-bell text-amber-500 text-base animate-bounce"></i>
+              <span class="font-bold">${a.message}</span>
+            </div>
+            <button onclick="markAlertRead(${a.id})" class="px-3 py-1 bg-amber-200 hover:bg-amber-300 text-amber-900 font-bold rounded-lg">
+              Atendida
+            </button>
+          </div>
+        `;
+      });
+    }
+
+    async function markAlertRead(id) {
+      await fetch(API_BASE + `/api/alerts/${id}/read`, { method: 'POST' });
+      await loadData();
+    }
+
+    async function handleQuoteSubmit(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btn-process-ai');
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>Procesando con IA...</span>`;
+
+      const supplier_name = document.getElementById('quote-supplier').value;
+      const raw_text = document.getElementById('quote-text').value;
+
+      try {
+        const res = await fetch(API_BASE + '/api/quotes/process', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ supplier_name, raw_text })
+        });
+        if (res.ok) {
+          document.getElementById('form-quote').reset();
+          await loadData();
+          switchTab('tab-ai');
+        }
+      } catch (err) {
+        alert("Error procesando cotización: " + err);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> <span>Procesar con IA de Aurani</span>`;
+      }
+    }
+
+    function openAddProductModal() {
+      document.getElementById('add-modal').classList.remove('hidden');
+    }
+
+    function closeAddModal() {
+      document.getElementById('add-modal').classList.add('hidden');
+    }
+
+    async function saveNewProduct() {
+      const sku = document.getElementById('add-prod-sku').value.trim();
+      const name = document.getElementById('add-prod-name').value.trim();
+      const category = document.getElementById('add-prod-category').value.trim();
+
+      if (!sku || !name) {
+        alert("Por favor completa el SKU y Nombre del insumo");
+        return;
+      }
+
+      const payload = {
+        sku: sku,
+        category: category || 'General',
+        name: name,
+        stock_quantity: parseFloat(document.getElementById('add-prod-stock').value) || 0,
+        min_stock: parseFloat(document.getElementById('add-prod-min').value) || 0,
+        unit_price: parseFloat(document.getElementById('add-prod-price').value) || 0,
+        user_name: document.getElementById('add-user-name').value.trim() || 'Administrador'
+      };
+
+      try {
+        const res = await fetch(API_BASE + '/api/products', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          closeAddModal();
+          document.getElementById('add-product-form').reset();
+          await loadData();
+          alert("¡Insumo '" + name + "' creado exitosamente!");
+        } else {
+          const errData = await res.json();
+          alert("No se pudo agregar: " + (errData.error || "El SKU ya existe en la base de datos"));
+        }
+      } catch (err) {
+        alert("Error de conexión: " + err.message);
+      }
+    }
+
+    function openEditModal(id) {
+      const prod = currentProducts.find(p => p.id === id);
+      if (!prod) return;
+      document.getElementById('edit-prod-id').value = prod.id;
+      document.getElementById('edit-prod-name').value = prod.name;
+      document.getElementById('edit-prod-stock').value = prod.stock_quantity;
+      document.getElementById('edit-prod-min').value = prod.min_stock;
+      document.getElementById('edit-prod-price').value = prod.unit_price;
+      document.getElementById('edit-modal').classList.remove('hidden');
+    }
+
+    function closeEditModal() {
+      document.getElementById('edit-modal').classList.add('hidden');
+    }
+
+    async function handleEditSubmit(e) {
+      e.preventDefault();
+      const id = document.getElementById('edit-prod-id').value;
+      const payload = {
+        name: document.getElementById('edit-prod-name').value,
+        stock_quantity: parseFloat(document.getElementById('edit-prod-stock').value),
+        min_stock: parseFloat(document.getElementById('edit-prod-min').value),
+        unit_price: parseFloat(document.getElementById('edit-prod-price').value),
+        user_name: document.getElementById('edit-user-name').value
+      };
+
+      const res = await fetch(API_BASE + `/api/products/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        closeEditModal();
+        await loadData();
+      }
+    }
+
+    function switchTab(tabId) {
+      ['tab-inventory', 'tab-ai', 'tab-audit'].forEach(id => {
+        document.getElementById(id).classList.add('hidden');
+      });
+      document.getElementById(tabId).classList.remove('hidden');
+
+      const btns = {
+        'tab-inventory': 'btn-inventory',
+        'tab-ai': 'btn-ai',
+        'tab-audit': 'btn-audit'
+      };
+
+      Object.keys(btns).forEach(key => {
+        const b = document.getElementById(btns[key]);
+        if (key === tabId) {
+          b.className = "pb-3 border-b-2 border-aurani-magenta text-aurani-magenta flex items-center space-x-2 font-bold";
+        } else {
+          b.className = "pb-3 border-b-2 border-transparent text-slate-500 hover:text-aurani-magenta flex items-center space-x-2 font-bold";
+        }
+      });
+    }
+
+    // --- FUNCIONES DE EXPORTACIÓN Y REPORTES ---
+
+    // 1. Exportar Inventario a Excel (CSV UTF-8)
+    function exportProductsCSV() {
+      if (!currentProducts || currentProducts.length === 0) {
+        alert("No hay productos en el inventario para exportar");
+        return;
+      }
+
+      let csvContent = "\uFEFFSKU;Producto / Insumo;Categoría;Stock Actual;Stock Mínimo;Precio Unitario ($ MXN);Valor Total en Stock;Estado\n";
+
+      currentProducts.forEach(p => {
+        const isCritical = p.stock_quantity <= p.min_stock;
+        const totalValue = (p.stock_quantity * p.unit_price).toFixed(2);
+        const status = isCritical ? 'STOCK CRITICO' : 'NORMAL';
+
+        const row = [
+          `"${p.sku}"`,
+          `"${p.name.replace(/"/g, '""')}"`,
+          `"${p.category.replace(/"/g, '""')}"`,
+          p.stock_quantity,
+          p.min_stock,
+          p.unit_price,
+          totalValue,
+          `"${status}"`
+        ];
+        csvContent += row.join(';') + "\n";
+      });
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      const dateStr = new Date().toISOString().slice(0, 10);
+      link.setAttribute("href", url);
+      link.setAttribute("download", `reporte_inventario_aurani_${dateStr}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // 2. Exportar Historial de Auditoría a Excel (CSV)
+    async function exportAuditCSV() {
+      try {
+        const res = await fetch(API_BASE + '/api/audit-logs');
+        const data = await res.json();
+        if (!data || data.length === 0) {
+          alert("No hay registros de auditoría para exportar");
+          return;
+        }
+
+        let csvContent = "\uFEFFID Log;Fecha / Hora;Usuario / Dispositivo;Acción;Entidad (ID);Detalle del Cambio\n";
+
+        data.forEach(log => {
+          const dateStr = new Date(log.timestamp).toLocaleString('es-MX');
+          const row = [
+            log.id,
+            `"${dateStr}"`,
+            `"${(log.user_name || '').replace(/"/g, '""')}"`,
+            `"${(log.action || '').replace(/"/g, '""')}"`,
+            `"${log.entity_type || ''} (${log.entity_id || 0})"`,
+            `"${(log.details || '').replace(/"/g, '""')}"`
+          ];
+          csvContent += row.join(';') + "\n";
+        });
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        const dateStr = new Date().toISOString().slice(0, 10);
+        link.setAttribute("href", url);
+        link.setAttribute("download", `reporte_auditoria_aurani_${dateStr}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (err) {
+        alert("Error al exportar auditoría: " + err.message);
+      }
+    }
+
+    // 3. Imprimir Reporte Ejecutivo o Guardar como PDF
+    function printInventoryReport() {
+      window.print();
+    }
+
+    // Initial load
+    loadData();
+  </script>
+</body>
+</html>
