@@ -259,16 +259,29 @@ app.post('/api/auth/login', (req, res) => {
 });
 
 app.post('/api/auth/recover-password', (req, res) => {
-  const { email } = req.body;
+  const { email, newPassword, new_password } = req.body;
+  const targetPassword = newPassword || new_password;
+
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!email || !emailRegex.test(email)) {
     return res.status(400).json({ error: 'Ingresa un correo electrónico válido' });
   }
 
   db.get(`SELECT id, name FROM users WHERE email = ?`, [email], (err, user) => {
-    if (!user) return res.status(404).json({ error: 'Correo no registrado' });
-    logAudit('User', user.id, 'RECUPERAR_PASS', `Solicitud de recuperación enviada a ${email}`, user.name);
-    res.json({ status: 'ok', message: `Instrucciones de recuperación enviadas exitosamente al correo ${email}` });
+    if (err) return res.status(500).json({ error: err.message });
+    if (!user) return res.status(404).json({ error: 'El correo electrónico no está registrado' });
+
+    if (targetPassword) {
+      const hashedPassword = bcrypt.hashSync(targetPassword, 10);
+      db.run(`UPDATE users SET password = ? WHERE id = ?`, [hashedPassword, user.id], (updateErr) => {
+        if (updateErr) return res.status(500).json({ error: 'Error al actualizar la contraseña' });
+        logAudit('User', user.id, 'CAMBIO_PASSWORD', `Contraseña reestablecida exitosamente para ${email}`, user.name);
+        return res.json({ status: 'ok', message: '¡Contraseña reestablecida exitosamente! Ya puedes iniciar sesión.' });
+      });
+    } else {
+      logAudit('User', user.id, 'RECUPERAR_PASS', `Solicitud de recuperación para ${email}`, user.name);
+      return res.json({ status: 'ok', message: `Correo verificado para ${email}. Por favor ingresa tu nueva contraseña.` });
+    }
   });
 });
 
@@ -395,6 +408,12 @@ app.post('/api/alerts/:id/read', (req, res) => {
   db.run(`UPDATE alerts SET status = 'ATENDIDA' WHERE id = ?`, [req.params.id], (err) => {
     res.json({ status: 'ok' });
   });
+});
+
+// Endpoint para descargar la base de datos SQLite en vivo
+app.get('/api/download-db', (req, res) => {
+  const dbFile = path.join(__dirname, 'sistema_fabrica_node.db');
+  res.download(dbFile, 'sistema_fabrica_node.db');
 });
 
 // Arrancar Servidor Node.js
