@@ -236,12 +236,13 @@ app.post('/api/auth/register', (req, res) => {
 });
 
 app.post('/api/auth/login', (req, res) => {
-  const { email, password } = req.body;
+  const email = (req.body.email || '').trim().toLowerCase();
+  const { password } = req.body;
   if (!email || !password) {
     return res.status(400).json({ error: 'Correo y contraseña son requeridos' });
   }
 
-  db.get(`SELECT id, name, email, password, role FROM users WHERE email = ?`, [email], (err, user) => {
+  db.get(`SELECT id, name, email, password, role FROM users WHERE LOWER(TRIM(email)) = ?`, [email], (err, user) => {
     if (err) return res.status(500).json({ error: err.message });
     if (!user) return res.status(401).json({ error: 'Correo o contraseña incorrectos' });
 
@@ -259,7 +260,8 @@ app.post('/api/auth/login', (req, res) => {
 });
 
 app.post('/api/auth/recover-password', (req, res) => {
-  const { email, newPassword, new_password } = req.body;
+  const email = (req.body.email || '').trim().toLowerCase();
+  const { newPassword, new_password } = req.body;
   const targetPassword = newPassword || new_password;
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -267,9 +269,9 @@ app.post('/api/auth/recover-password', (req, res) => {
     return res.status(400).json({ error: 'Ingresa un correo electrónico válido' });
   }
 
-  db.get(`SELECT id, name FROM users WHERE email = ?`, [email], (err, user) => {
+  db.get(`SELECT id, name FROM users WHERE LOWER(TRIM(email)) = ?`, [email], (err, user) => {
     if (err) return res.status(500).json({ error: err.message });
-    if (!user) return res.status(404).json({ error: 'El correo electrónico no está registrado' });
+    if (!user) return res.status(404).json({ error: 'El correo electrónico no está registrado en la base de datos' });
 
     if (targetPassword) {
       const hashedPassword = bcrypt.hashSync(targetPassword, 10);
