@@ -205,8 +205,33 @@
                 <th class="px-4 py-3">Entidad</th>
                 <th class="px-4 py-3">Detalle del Cambio</th>
               </tr>
-            </thead>
             <tbody id="audit-table-body" class="divide-y divide-pink-50">
+              <!-- JS Render -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TABLA USUARIOS REGISTRADOS -->
+      <div class="card-aurani overflow-hidden shadow-sm mt-6">
+        <div class="p-4 bg-pink-50/40 border-b border-pink-100 flex justify-between items-center">
+          <h3 class="text-sm font-bold text-aurani-magenta flex items-center space-x-2">
+            <i class="fa-solid fa-users"></i>
+            <span>Usuarios Registrados en el Sistema (Nube / App Android)</span>
+          </h3>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm text-slate-700">
+            <thead class="bg-slate-50 text-xs uppercase tracking-wider text-slate-500 font-bold border-b border-slate-100">
+              <tr>
+                <th class="px-4 py-3">ID</th>
+                <th class="px-4 py-3">Nombre del Operador</th>
+                <th class="px-4 py-3">Correo Electrónico</th>
+                <th class="px-4 py-3">Rol</th>
+                <th class="px-4 py-3">Fecha de Registro</th>
+              </tr>
+            </thead>
+            <tbody id="users-table-body" class="divide-y divide-slate-100">
               <!-- JS Render -->
             </tbody>
           </table>
@@ -320,7 +345,7 @@
     let currentProducts = [];
 
     async function loadData() {
-      await Promise.all([fetchProducts(), fetchQuotes(), fetchAuditLogs(), fetchAlerts()]);
+      await Promise.all([fetchProducts(), fetchQuotes(), fetchAuditLogs(), fetchAlerts(), fetchUsers()]);
     }
 
     async function fetchProducts() {
@@ -433,6 +458,31 @@
           </tr>
         `;
       });
+    }
+
+    async function fetchUsers() {
+      try {
+        const res = await fetch(API_BASE + '/api/users');
+        const data = await res.json();
+        const tbody = document.getElementById('users-table-body');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        data.forEach(u => {
+          const dateStr = u.created_at ? new Date(u.created_at).toLocaleString('es-MX') : 'Reciente';
+          tbody.innerHTML += `
+            <tr class="hover:bg-pink-50/30 text-xs">
+              <td class="px-4 py-2.5 font-mono text-slate-400">#${u.id}</td>
+              <td class="px-4 py-2.5 font-bold text-slate-800">${u.name}</td>
+              <td class="px-4 py-2.5 font-mono text-aurani-magenta font-semibold">${u.email}</td>
+              <td class="px-4 py-2.5"><span class="px-2 py-0.5 rounded bg-emerald-100 font-mono text-emerald-800 font-bold">${u.role || 'OPERADOR'}</span></td>
+              <td class="px-4 py-2.5 text-slate-500">${dateStr}</td>
+            </tr>
+          `;
+        });
+      } catch (e) {
+        console.error('Error fetching users:', e);
+      }
     }
 
     async function fetchAlerts() {

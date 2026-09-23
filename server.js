@@ -287,6 +287,14 @@ app.post('/api/auth/recover-password', (req, res) => {
   });
 });
 
+// Endpoint para consultar todos los usuarios registrados (nube y local)
+app.get('/api/users', (req, res) => {
+  db.all(`SELECT id, name, email, role, created_at FROM users ORDER BY id ASC`, (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
+
 // --- ENDPOINTS API REST (Para App Android y Dashboard Web) ---
 
 // 1. Obtener lista de productos (Ideal para RecyclerView en Android)
