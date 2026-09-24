@@ -403,9 +403,17 @@
 
       data.forEach(q => {
         let itemsHtml = q.items.map(item => `
-          <div class="flex justify-between items-center text-xs py-1 border-b border-pink-50">
-            <span class="text-slate-700 font-semibold">${item.product_name} x ${item.quantity}</span>
-            <span class="font-mono text-emerald-700 font-bold">$${item.total_price.toLocaleString('es-MX', {minimumFractionDigits: 2})}</span>
+          <div class="py-2 border-b border-pink-100/60 text-xs space-y-1">
+            <div class="flex justify-between items-center">
+              <span class="text-slate-800 font-bold text-sm">${item.product_name} <span class="text-xs text-aurani-magenta font-semibold">(${item.variety || 'Normal'})</span></span>
+              <span class="font-mono text-emerald-700 font-extrabold text-sm">$${(item.price_per_kg || item.unit_price || 0).toLocaleString('es-MX', {minimumFractionDigits: 2})}/kg</span>
+            </div>
+            <div class="flex items-center space-x-2 text-[11px] text-slate-500">
+              <span class="bg-pink-100 text-aurani-magenta px-2 py-0.5 rounded font-bold">MOQ: ${item.moq || item.quantity || 1} kg</span>
+              ${item.has_iva ? '<span class="bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold">IVA 16%</span>' : '<span class="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">Sin IVA</span>'}
+              ${item.has_ieps ? '<span class="bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded font-bold">IEPS</span>' : ''}
+              ${item.notes ? `<span class="italic text-slate-400">📌 ${item.notes}</span>` : ''}
+            </div>
           </div>
         `).join('');
 

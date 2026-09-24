@@ -78,9 +78,15 @@ db.serialize(() => {
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     quote_id INTEGER,
     product_name TEXT,
-    quantity REAL,
-    unit_price REAL,
-    total_price REAL,
+    variety TEXT DEFAULT 'Estándar',
+    moq REAL DEFAULT 1.0,
+    price_per_kg REAL DEFAULT 0.0,
+    has_iva INTEGER DEFAULT 0,
+    has_ieps INTEGER DEFAULT 0,
+    notes TEXT,
+    quantity REAL DEFAULT 1.0,
+    unit_price REAL DEFAULT 0.0,
+    total_price REAL DEFAULT 0.0,
     FOREIGN KEY(quote_id) REFERENCES quotes(id)
   )`);
 
@@ -125,8 +131,20 @@ function seedDatabase() {
     ('MAT-003', 'Caja de Cartón Corrugado 40x40', 'Empaque', 120.0, 100.0, 18.0, 2),
     ('INS-004', 'Aceite Lubricante Sintético 20L', 'Mantenimiento', 3.0, 5.0, 2400.0, 1)
   `, function() {
+    db.run(`INSERT INTO quotes (supplier_name, quote_number, raw_content, ai_summary, total_amount, status) VALUES
+      ('nbf', 'COT-NBF-2026', 'Aceite de coco 1kg $195.79', '🤖 [Node.js IA Engine]: Cotización de nbf procesada automáticamente para Aceite de Coco. MOQ: 1kg.', 195.79, 'RECIBIDA'),
+      ('Pochteca', 'COT-POC-2026', 'Alulosa Cristal 25kg $109.96/kg (4 días de entrega)', '🤖 [Node.js IA Engine]: Cotización de Pochteca para Alulosa cristal. MOQ: 25kg, entrega en 4 días.', 2749.00, 'RECIBIDA'),
+      ('Zucarmex', 'COT-ZUC-2026', 'Azúcar refinada 1000kg $19.80/kg envío incluido', '🤖 [Node.js IA Engine]: Cotización de Zucarmex para Azúcar refinada. MOQ: 1000kg con envío incluido.', 19800.00, 'RECIBIDA')
+    `, function() {
+      db.run(`INSERT INTO quote_items (quote_id, product_name, variety, moq, price_per_kg, has_iva, has_ieps, notes, quantity, unit_price, total_price) VALUES
+        (1, 'Aceite de coco', 'Normal', 1.0, 195.79, 0, 0, 'SODEXIM: consumo mínimo 3000', 1.0, 195.79, 195.79),
+        (2, 'Alulosa', 'Cristal', 25.0, 109.96, 1, 0, '4 días de entrega', 25.0, 109.96, 2749.00),
+        (3, 'Azúcar', 'Refinada', 1000.0, 19.80, 0, 0, 'Envío incluido', 1000.0, 19.80, 19800.00)
+      `);
+    });
+
     checkAllLowStock();
-    logAudit('Sistema', 0, 'INICIALIZACION', 'Base de datos Node.js inicializada con datos demo.', 'Sistema Central Node.js');
+    logAudit('Sistema', 0, 'INICIALIZACION', 'Base de datos Node.js inicializada con matriz de cotizaciones Excel.', 'Sistema Central Node.js');
   });
 }
 
@@ -390,11 +408,22 @@ app.post('/api/quotes/process', async (req, res) => {
   );
 });
 
-// 5. Historial de Cotizaciones
+// 5. Historial de Cotizaciones (con Desglose Excel e IA)
 app.get('/api/quotes', (req, res) => {
   db.all(`SELECT * FROM quotes ORDER BY created_at DESC`, (err, quotes) => {
     if (err) return res.status(500).json({ error: err.message });
-    res.json(quotes);
+    if (!quotes || quotes.length === 0) return res.json([]);
+
+    let completed = 0;
+    quotes.forEach(q => {
+      db.all(`SELECT * FROM quote_items WHERE quote_id = ?`, [q.id], (itemErr, items) => {
+        q.items = items || [];
+        completed++;
+        if (completed === quotes.length) {
+          res.json(quotes);
+        }
+      });
+    });
   });
 });
 
