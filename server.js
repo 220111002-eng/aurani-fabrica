@@ -197,7 +197,7 @@ async function parseQuoteContent(supplierName, rawText) {
     }
   }
 
-  // Fallback estructurado local
+  // Fallback estructurado local inteligente
   const items = [];
   const lines = rawText.split('\n').filter(l => l.trim());
   let total = 0;
@@ -209,20 +209,63 @@ async function parseQuoteContent(supplierName, rawText) {
       const price = parseFloat(nums[nums.length - 1]);
       const name = l.replace(/\$?\s*\d+(?:\.\d+)?/g, '').trim().replace(/^[-:*]+/, '').trim() || "Insumo Industrial";
       const totalItem = qty * price;
-      items.push({ product_name: name, quantity: qty, unit_price: price, total_price: totalItem });
+      items.push({ 
+        product_name: name, 
+        variety: 'Estándar', 
+        moq: qty, 
+        price_per_kg: price, 
+        has_iva: 0, 
+        has_ieps: 0, 
+        notes: 'Captura rápida', 
+        quantity: qty, 
+        unit_price: price, 
+        total_price: totalItem 
+      });
       total += totalItem;
+    } else if (nums && nums.length === 1) {
+      const price = parseFloat(nums[0]);
+      const name = l.replace(/\$?\s*\d+(?:\.\d+)?/g, '').trim().replace(/^[-:*]+/, '').trim() || "Insumo Industrial";
+      items.push({ 
+        product_name: name, 
+        variety: 'Estándar', 
+        moq: 1.0, 
+        price_per_kg: price, 
+        has_iva: 0, 
+        has_ieps: 0, 
+        notes: 'Precio unitario detectado', 
+        quantity: 1.0, 
+        unit_price: price, 
+        total_price: price 
+      });
+      total += price;
     }
   });
 
   if (items.length === 0) {
-    items.push({ product_name: "Insumos y Materiales de Fábrica", quantity: 1, unit_price: 1500.0, total_price: 1500.0 });
-    total = 1500.0;
+    const productName = rawText.trim() || "Insumo Industrial";
+    items.push({ 
+      product_name: productName, 
+      variety: 'General', 
+      moq: 1.0, 
+      price_per_kg: 0.0, 
+      has_iva: 0, 
+      has_ieps: 0, 
+      notes: 'Sin precio detectado en texto', 
+      quantity: 1.0, 
+      unit_price: 0.0, 
+      total_price: 0.0 
+    });
+    total = 0.0;
   }
+
+  const aiNote = total > 0 ? 
+    `🤖 [Node.js IA Engine]: Cotización de '${supplierName}' procesada con ${items.length} partida(s) por un total de $${total.toFixed(2)} MXN.` : 
+    `🤖 [Node.js IA Engine]: Cotización de '${supplierName}' recibida para '${rawText.trim()}'. No se especificó precio en el texto (asignado $0.00 MXN).`;
 
   return {
     supplier_name: supplierName,
     quote_number: `COT-${supplierName.substring(0,3).toUpperCase()}-2026`,
-    ai_summary: `🤖 [Node.js IA Engine]: Cotización de '${supplierName}' procesada automáticamente con ${items.length} partidas por un total de $${total.toFixed(2)} MXN.`,
+    ai_summary: aiNote,
     total_amount: total,
     items: items
   };
