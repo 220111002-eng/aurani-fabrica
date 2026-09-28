@@ -1,3 +1,5 @@
+// Aurani 2.0 - Node.js Backend Engine
+// Version: 2.1 (Categorías, Áreas, Keep-Alive & Auth)
 const express = require('express');
 const cors = require('cors');
 const sqlite3 = require('sqlite3').verbose();
@@ -274,8 +276,13 @@ async function parseQuoteContent(supplierName, rawText) {
 // --- ENDPOINTS AUTENTICACIÓN (Para App Android: Login, Registro, Recuperación) ---
 
 app.post('/api/auth/register', (req, res) => {
-  const { name, email, password, role } = req.body;
-  if (!email || !password || !name) {
+  const name = (req.body.name || '').trim();
+  const email = (req.body.email || '').trim().toLowerCase();
+  const rawPassword = req.body.password || '';
+  const cleanPassword = rawPassword.trim();
+  const role = req.body.role || 'OPERADOR';
+
+  if (!email || !cleanPassword || !name) {
     return res.status(400).json({ error: 'Nombre, email y contraseña son obligatorios' });
   }
 
@@ -284,22 +291,24 @@ app.post('/api/auth/register', (req, res) => {
     return res.status(400).json({ error: 'Formato de correo electrónico inválido' });
   }
 
-  const hashedPassword = bcrypt.hashSync(password, 10);
+  const hashedPassword = bcrypt.hashSync(cleanPassword, 10);
 
   db.run(`INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)`,
-    [name, email, hashedPassword, role || 'OPERADOR'],
+    [name, email, hashedPassword, role],
     function(err) {
       if (err) return res.status(400).json({ error: 'El correo electrónico ya está registrado' });
       logAudit('User', this.lastID, 'REGISTRO', `Nuevo usuario registrado desde App Android: ${name} (${email})`, name);
-      res.status(201).json({ id: this.lastID, name, email, role: role || 'OPERADOR', message: 'Usuario registrado exitosamente' });
+      res.status(201).json({ id: this.lastID, name, email, role, message: 'Usuario registrado exitosamente' });
     }
   );
 });
 
 app.post('/api/auth/login', (req, res) => {
   const email = (req.body.email || '').trim().toLowerCase();
-  const { password } = req.body;
-  if (!email || !password) {
+  const rawPassword = req.body.password || '';
+  const cleanPassword = rawPassword.trim();
+
+  if (!email || !cleanPassword) {
     return res.status(400).json({ error: 'Correo y contraseña son requeridos' });
   }
 
@@ -307,7 +316,16 @@ app.post('/api/auth/login', (req, res) => {
     if (err) return res.status(500).json({ error: err.message });
     if (!user) return res.status(401).json({ error: 'Correo o contraseña incorrectos' });
 
-    const isValidPassword = bcrypt.compareSync(password, user.password) || (password === user.password);
+    let isValidPassword = false;
+    try {
+      isValidPassword = 
+        (cleanPassword && bcrypt.compareSync(cleanPassword, user.password)) ||
+        (rawPassword && bcrypt.compareSync(rawPassword, user.password)) ||
+        (cleanPassword === user.password) ||
+        (rawPassword === user.password);
+    } catch (e) {
+      isValidPassword = (cleanPassword === user.password) || (rawPassword === user.password);
+    }
 
     if (!isValidPassword) {
       logAudit('User', user.id, 'LOGIN_FALLIDO', `Intento fallido de acceso para correo: ${email}`, user.name);
@@ -386,23 +404,24 @@ app.post('/api/products', (req, res) => {
 // 3. Modificar producto / Editar stock (Soporta PUT, POST, /api/products/:id y /api/productos/:id)
 const handleProductUpdate = (req, res) => {
   const id = req.params.id;
-  const { name, stock_quantity, min_stock, unit_price, user_name, stock } = req.body;
+  const { name, category, stock_quantity, min_stock, unit_price, user_name, stock } = req.body;
 
   db.get(`SELECT * FROM products WHERE id = ?`, [id], (err, prod) => {
     if (!prod) return res.status(404).json({ error: 'Producto no encontrado' });
 
     const newName = name !== undefined ? name : prod.name;
+    const newCategory = category !== undefined ? category : prod.category;
     const newStock = stock_quantity !== undefined ? parseFloat(stock_quantity) : (stock !== undefined ? parseFloat(stock) : prod.stock_quantity);
     const newMin = min_stock !== undefined ? parseFloat(min_stock) : prod.min_stock;
     const newPrice = unit_price !== undefined ? parseFloat(unit_price) : prod.unit_price;
     const user = user_name || 'Operador Android';
 
-    db.run(`UPDATE products SET name = ?, stock_quantity = ?, min_stock = ?, unit_price = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-      [newName, newStock, newMin, newPrice, id],
+    db.run(`UPDATE products SET name = ?, category = ?, stock_quantity = ?, min_stock = ?, unit_price = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+      [newName, newCategory, newStock, newMin, newPrice, id],
       function(err) {
         if (err) return res.status(500).json({ error: err.message });
         
-        const details = `Stock: ${prod.stock_quantity} -> ${newStock}, Precio: $${prod.unit_price} -> $${newPrice}`;
+        const details = `Categoría: ${prod.category} -> ${newCategory}, Stock: ${prod.stock_quantity} -> ${newStock}, Precio: $${prod.unit_price} -> $${newPrice}`;
         logAudit('Product', id, 'ACTUALIZAR', details, user);
 
         db.get(`SELECT * FROM products WHERE id = ?`, [id], (e, updatedProd) => {
@@ -513,6 +532,11 @@ setInterval(() => {
     console.log('Heartbeat error:', err.message);
   });
 }, 10 * 60 * 1000); // Cada 10 minutos
+
+// Ruta principal Web Dashboard HTML
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'app/static/index.html'));
+});
 
 // Arrancar Servidor Node.js
 app.listen(PORT, '0.0.0.0', () => {

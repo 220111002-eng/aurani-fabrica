@@ -88,11 +88,12 @@
     </div>
 
     <!-- PESTAÑA 1: INVENTARIO -->
-    <section id="tab-inventory" class="space-y-6">
+    <section id="tab-inventory" class="space-y-8">
+      <!-- Encabezado General -->
       <div class="flex justify-between items-center flex-wrap gap-4">
         <div>
-          <h2 class="text-lg font-bold text-slate-800">Catálogo General de Insumos</h2>
-          <p class="text-xs text-slate-500">Monitoreo en tiempo real sincronizado con la App Android y base de datos Node.js.</p>
+          <h2 class="text-xl font-bold text-slate-800">Catálogo e Inventario por Áreas</h2>
+          <p class="text-xs text-slate-500">Clasificación en tiempo real: Materias Primas, Productos de Muestra y Empaque/Embalaje.</p>
         </div>
         <div class="flex items-center space-x-2 no-print">
           <button onclick="exportProductsCSV()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20 flex items-center space-x-2">
@@ -103,33 +104,115 @@
             <i class="fa-solid fa-file-pdf"></i>
             <span>Imprimir / PDF</span>
           </button>
-          <button onclick="openAddProductModal()" class="px-4 py-2 bg-aurani-magenta hover:bg-pink-700 text-white rounded-xl text-xs font-bold shadow-md shadow-pink-600/20 flex items-center space-x-2">
+          <button onclick="openAddProductModal('Materias Primas')" class="px-4 py-2 bg-aurani-magenta hover:bg-pink-700 text-white rounded-xl text-xs font-bold shadow-md shadow-pink-600/20 flex items-center space-x-2">
             <i class="fa-solid fa-plus"></i>
             <span>Agregar Nuevo Insumo</span>
           </button>
         </div>
       </div>
 
-      <!-- Tabla de Inventario -->
-      <div class="card-aurani overflow-hidden shadow-sm">
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-sm text-slate-700">
-            <thead class="bg-pink-50/60 text-xs uppercase tracking-wider text-aurani-magenta border-b border-pink-100 font-bold">
-              <tr>
-                <th class="px-5 py-3.5">SKU</th>
-                <th class="px-5 py-3.5">Producto / Insumo</th>
-                <th class="px-5 py-3.5">Categoría</th>
-                <th class="px-5 py-3.5 text-center">Stock Actual</th>
-                <th class="px-5 py-3.5 text-center">Stock Mínimo</th>
-                <th class="px-5 py-3.5 text-right">Precio Unitario</th>
-                <th class="px-5 py-3.5 text-center">Estado</th>
-                <th class="px-5 py-3.5 text-center">Acciones</th>
-              </tr>
-            </thead>
-            <tbody id="products-table-body" class="divide-y divide-pink-50">
-              <!-- JS Render -->
-            </tbody>
-          </table>
+      <!-- SECCIÓN 1: MATERIAS PRIMAS -->
+      <div class="space-y-3">
+        <div class="flex justify-between items-center">
+          <h3 class="text-base font-bold text-aurani-magenta flex items-center space-x-2">
+            <i class="fa-solid fa-vial-virus text-aurani-magenta"></i>
+            <span>🧪 Materias Primas e Insumos Industriales</span>
+          </h3>
+          <button onclick="openAddProductModal('Materias Primas')" class="px-3 py-1.5 bg-pink-50 hover:bg-pink-100 text-aurani-magenta border border-pink-200 rounded-xl text-xs font-bold flex items-center space-x-1 no-print">
+            <i class="fa-solid fa-plus"></i>
+            <span>+ Agregar Materia Prima</span>
+          </button>
+        </div>
+        <div class="card-aurani overflow-hidden shadow-sm">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-700">
+              <thead class="bg-pink-50/60 text-xs uppercase tracking-wider text-aurani-magenta border-b border-pink-100 font-bold">
+                <tr>
+                  <th class="px-5 py-3">SKU</th>
+                  <th class="px-5 py-3">Producto / Insumo</th>
+                  <th class="px-5 py-3">Categoría</th>
+                  <th class="px-5 py-3 text-center">Stock Actual</th>
+                  <th class="px-5 py-3 text-center">Stock Mínimo</th>
+                  <th class="px-5 py-3 text-right">Precio Unitario</th>
+                  <th class="px-5 py-3 text-center">Estado</th>
+                  <th class="px-5 py-3 text-center">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="table-materias-primas" class="divide-y divide-pink-50">
+                <!-- JS Render -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECCIÓN 2: PRODUCTOS DE MUESTRA -->
+      <div class="space-y-3 pt-4 border-t border-pink-100">
+        <div class="flex justify-between items-center">
+          <h3 class="text-base font-bold text-purple-700 flex items-center space-x-2">
+            <i class="fa-solid fa-vial-circle-check text-purple-600"></i>
+            <span>🎁 Productos de Muestra</span>
+          </h3>
+          <button onclick="openAddProductModal('Muestras')" class="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-xl text-xs font-bold flex items-center space-x-1 no-print">
+            <i class="fa-solid fa-plus"></i>
+            <span>+ Agregar Producto de Muestra</span>
+          </button>
+        </div>
+        <div class="card-aurani overflow-hidden shadow-sm border-purple-100">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-700">
+              <thead class="bg-purple-50/60 text-xs uppercase tracking-wider text-purple-800 border-b border-purple-100 font-bold">
+                <tr>
+                  <th class="px-5 py-3">SKU</th>
+                  <th class="px-5 py-3">Producto de Muestra</th>
+                  <th class="px-5 py-3">Categoría</th>
+                  <th class="px-5 py-3 text-center">Stock Actual</th>
+                  <th class="px-5 py-3 text-center">Stock Mínimo</th>
+                  <th class="px-5 py-3 text-right">Precio Unitario</th>
+                  <th class="px-5 py-3 text-center">Estado</th>
+                  <th class="px-5 py-3 text-center">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="table-muestras" class="divide-y divide-purple-50">
+                <!-- JS Render -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECCIÓN 3: EMPAQUE Y EMBALAJE -->
+      <div class="space-y-3 pt-4 border-t border-pink-100">
+        <div class="flex justify-between items-center">
+          <h3 class="text-base font-bold text-amber-800 flex items-center space-x-2">
+            <i class="fa-solid fa-box-open text-amber-600"></i>
+            <span>📦 Material de Empaque y Embalaje</span>
+          </h3>
+          <button onclick="openAddProductModal('Material de Empaque y Embalaje')" class="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl text-xs font-bold flex items-center space-x-1 no-print">
+            <i class="fa-solid fa-plus"></i>
+            <span>+ Agregar Material de Empaque</span>
+          </button>
+        </div>
+        <div class="card-aurani overflow-hidden shadow-sm border-amber-100">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-700">
+              <thead class="bg-amber-50/60 text-xs uppercase tracking-wider text-amber-900 border-b border-amber-100 font-bold">
+                <tr>
+                  <th class="px-5 py-3">SKU</th>
+                  <th class="px-5 py-3">Material de Empaque</th>
+                  <th class="px-5 py-3">Categoría</th>
+                  <th class="px-5 py-3 text-center">Stock Actual</th>
+                  <th class="px-5 py-3 text-center">Stock Mínimo</th>
+                  <th class="px-5 py-3 text-right">Precio Unitario</th>
+                  <th class="px-5 py-3 text-center">Estado</th>
+                  <th class="px-5 py-3 text-center">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="table-empaque" class="divide-y divide-amber-50">
+                <!-- JS Render -->
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </section>
@@ -256,8 +339,13 @@
             <input type="text" id="add-prod-sku" required placeholder="Ej: MAT-005" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono">
           </div>
           <div>
-            <label class="block text-xs font-bold text-slate-600">Categoría</label>
-            <input type="text" id="add-prod-category" required placeholder="Ej: Materias Primas" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+            <label class="block text-xs font-bold text-slate-600">Categoría / Área</label>
+            <select id="add-prod-category" required class="w-full px-3 py-2 bg-pink-50/60 border border-pink-200 rounded-xl text-xs font-bold text-aurani-magenta">
+              <option value="Materias Primas">🧪 Materias Primas</option>
+              <option value="Material de Empaque y Embalaje">📦 Material de Empaque y Embalaje</option>
+              <option value="Muestras">🎁 Muestras</option>
+              <option value="General">⚙️ General / Otros</option>
+            </select>
           </div>
         </div>
 
@@ -306,9 +394,20 @@
       <form id="edit-product-form" onsubmit="handleEditSubmit(event)" class="space-y-3">
         <input type="hidden" id="edit-prod-id">
 
-        <div>
-          <label class="block text-xs font-bold text-slate-600">Nombre del Producto</label>
-          <input type="text" id="edit-prod-name" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-600">Nombre del Producto</label>
+            <input type="text" id="edit-prod-name" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-600">Categoría / Área</label>
+            <select id="edit-prod-category" required class="w-full px-3 py-2 bg-pink-50/60 border border-pink-200 rounded-xl text-xs font-bold text-aurani-magenta">
+              <option value="Materias Primas">🧪 Materias Primas</option>
+              <option value="Material de Empaque y Embalaje">📦 Material de Empaque y Embalaje</option>
+              <option value="Muestras">🎁 Muestras</option>
+              <option value="General">⚙️ General / Otros</option>
+            </select>
+          </div>
         </div>
 
         <div class="grid grid-cols-2 gap-3">
@@ -343,36 +442,61 @@
   <script>
     const API_BASE = (window.location.protocol === 'file:' || !window.location.host) ? 'http://localhost:8000' : '';
     let currentProducts = [];
+    let activeCategory = 'TODOS';
 
     async function loadData() {
       await Promise.all([fetchProducts(), fetchQuotes(), fetchAuditLogs(), fetchAlerts(), fetchUsers()]);
     }
 
-    async function fetchProducts() {
-      const res = await fetch(API_BASE + '/api/products');
-      const data = await res.json();
-      currentProducts = data;
-      document.getElementById('stat-products').innerText = data.length;
+    function filterCategory(cat) {
+      activeCategory = cat;
+      const categories = ['TODOS', 'Materias Primas', 'Material de Empaque y Embalaje', 'Muestras', 'General'];
+      
+      categories.forEach(c => {
+        const btnId = 'cat-btn-' + c.replace(/\s+/g, '-');
+        const btn = document.getElementById(btnId);
+        if (btn) {
+          if (c === cat) {
+            btn.className = "px-3.5 py-1.5 rounded-xl text-xs font-bold bg-aurani-magenta text-white shadow-sm transition-all";
+          } else {
+            btn.className = "px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white hover:bg-pink-100 text-slate-700 hover:text-aurani-magenta border border-pink-200 transition-all";
+          }
+        }
+      });
 
-      const tbody = document.getElementById('products-table-body');
-      tbody.innerHTML = '';
+      renderProducts();
+    }
 
-      data.forEach(p => {
+    function renderProducts() {
+      const tbodyMP = document.getElementById('table-materias-primas');
+      const tbodyMuestras = document.getElementById('table-muestras');
+      const tbodyEmpaque = document.getElementById('table-empaque');
+
+      if (!tbodyMP || !tbodyMuestras || !tbodyEmpaque) return;
+
+      tbodyMP.innerHTML = '';
+      tbodyMuestras.innerHTML = '';
+      tbodyEmpaque.innerHTML = '';
+
+      let countMP = 0, countMuestras = 0, countEmpaque = 0;
+
+      currentProducts.forEach(p => {
+        const catLower = (p.category || 'General').toLowerCase().trim();
         const isCritical = p.stock_quantity <= p.min_stock;
         const statusBadge = isCritical
           ? `<span class="px-2.5 py-1 rounded-full bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold flex items-center space-x-1 justify-center"><i class="fa-solid fa-triangle-exclamation"></i><span>Stock Crítico</span></span>`
           : `<span class="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold flex items-center space-x-1 justify-center"><i class="fa-solid fa-circle-check"></i><span>Normal</span></span>`;
 
-        tbody.innerHTML += `
-          <tr class="hover:bg-pink-50/40 transition-colors">
-            <td class="px-5 py-3.5 font-mono text-xs font-bold text-aurani-magenta">${p.sku}</td>
-            <td class="px-5 py-3.5 font-bold text-slate-800">${p.name}</td>
-            <td class="px-5 py-3.5 text-slate-500 text-xs font-semibold">${p.category}</td>
-            <td class="px-5 py-3.5 text-center font-extrabold text-base ${isCritical ? 'text-rose-600' : 'text-slate-800'}">${p.stock_quantity}</td>
-            <td class="px-5 py-3.5 text-center text-slate-400 font-semibold">${p.min_stock}</td>
-            <td class="px-5 py-3.5 text-right font-mono font-bold text-emerald-700">$${p.unit_price.toLocaleString('es-MX', {minimumFractionDigits: 2})}</td>
-            <td class="px-5 py-3.5 text-center">${statusBadge}</td>
-            <td class="px-5 py-3.5 text-center space-x-1">
+        const rowHtml = `
+          <tr class="hover:bg-pink-50/40 transition-colors text-xs">
+            <td class="px-5 py-3 font-mono font-bold text-aurani-magenta">${p.sku}</td>
+            <td class="px-5 py-3 font-bold text-slate-800 text-sm">${p.name}</td>
+            <td class="px-5 py-3 font-bold"><span class="px-2.5 py-1 rounded-lg bg-pink-50 text-aurani-magenta border border-pink-100">${p.category || 'General'}</span></td>
+            <td class="px-5 py-3 text-center font-extrabold text-base ${isCritical ? 'text-rose-600' : 'text-slate-800'}">${p.stock_quantity}</td>
+            <td class="px-5 py-3 text-center text-slate-400 font-semibold">${p.min_stock}</td>
+            <td class="px-5 py-3 text-right font-mono font-bold text-emerald-700 text-sm">$${p.unit_price.toLocaleString('es-MX', {minimumFractionDigits: 2})}</td>
+            <td class="px-5 py-3 text-center">${statusBadge}</td>
+            <td class="px-5 py-3 text-center space-x-1">
               <button onclick="openEditModal(${p.id})" class="px-3 py-1 bg-pink-50 hover:bg-pink-100 text-aurani-magenta rounded-lg text-xs font-bold border border-pink-200">
                 <i class="fa-solid fa-pen"></i> Editar
               </button>
@@ -382,7 +506,36 @@
             </td>
           </tr>
         `;
+
+        if (catLower.includes('muestra')) {
+          tbodyMuestras.innerHTML += rowHtml;
+          countMuestras++;
+        } else if (catLower.includes('empaque') || catLower.includes('embalaje')) {
+          tbodyEmpaque.innerHTML += rowHtml;
+          countEmpaque++;
+        } else {
+          tbodyMP.innerHTML += rowHtml;
+          countMP++;
+        }
       });
+
+      if (countMP === 0) {
+        tbodyMP.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-xs text-slate-400 font-bold">No hay materias primas registradas aún. Haz clic en "+ Agregar Materia Prima" para registrar una.</td></tr>`;
+      }
+      if (countMuestras === 0) {
+        tbodyMuestras.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-xs text-purple-400 font-bold">No hay productos de muestra registrados aún. Haz clic en "+ Agregar Producto de Muestra" para registrar uno.</td></tr>`;
+      }
+      if (countEmpaque === 0) {
+        tbodyEmpaque.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-xs text-amber-500 font-bold">No hay materiales de empaque o embalaje registrados aún. Haz clic en "+ Agregar Material de Empaque" para registrar uno.</td></tr>`;
+      }
+    }
+
+    async function fetchProducts() {
+      const res = await fetch(API_BASE + '/api/products');
+      const data = await res.json();
+      currentProducts = data;
+      document.getElementById('stat-products').innerText = data.length;
+      renderProducts();
     }
 
     async function deleteProduct(id, name) {
@@ -556,7 +709,10 @@
       }
     }
 
-    function openAddProductModal() {
+    function openAddProductModal(defaultCategory = 'Materias Primas') {
+      if (document.getElementById('add-prod-category')) {
+        document.getElementById('add-prod-category').value = defaultCategory;
+      }
       document.getElementById('add-modal').classList.remove('hidden');
     }
 
@@ -610,6 +766,9 @@
       if (!prod) return;
       document.getElementById('edit-prod-id').value = prod.id;
       document.getElementById('edit-prod-name').value = prod.name;
+      if (document.getElementById('edit-prod-category')) {
+        document.getElementById('edit-prod-category').value = prod.category || 'General';
+      }
       document.getElementById('edit-prod-stock').value = prod.stock_quantity;
       document.getElementById('edit-prod-min').value = prod.min_stock;
       document.getElementById('edit-prod-price').value = prod.unit_price;
@@ -625,6 +784,7 @@
       const id = document.getElementById('edit-prod-id').value;
       const payload = {
         name: document.getElementById('edit-prod-name').value,
+        category: document.getElementById('edit-prod-category') ? document.getElementById('edit-prod-category').value : 'General',
         stock_quantity: parseFloat(document.getElementById('edit-prod-stock').value),
         min_stock: parseFloat(document.getElementById('edit-prod-min').value),
         unit_price: parseFloat(document.getElementById('edit-prod-price').value),
