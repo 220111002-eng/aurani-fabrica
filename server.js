@@ -59,11 +59,17 @@ db.serialize(() => {
     name TEXT NOT NULL,
     category TEXT DEFAULT 'General',
     stock_quantity REAL DEFAULT 0.0,
+    unlotified_stock REAL DEFAULT 0.0,
+    lotified_stock REAL DEFAULT 0.0,
     min_stock REAL DEFAULT 10.0,
     unit_price REAL DEFAULT 0.0,
     supplier_id INTEGER,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
+
+  // Migraciones seguras para bases de datos existentes
+  db.run("ALTER TABLE products ADD COLUMN unlotified_stock REAL DEFAULT 0.0", () => {});
+  db.run("ALTER TABLE products ADD COLUMN lotified_stock REAL DEFAULT 0.0", () => {});
 
   db.run(`CREATE TABLE IF NOT EXISTS quotes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -386,9 +392,18 @@ app.get('/api/products', (req, res) => {
 
 // 2. Crear producto
 app.post('/api/products', (req, res) => {
-  const { sku, name, category, stock_quantity, min_stock, unit_price, supplier_id } = req.body;
-  db.run(`INSERT INTO products (sku, name, category, stock_quantity, min_stock, unit_price, supplier_id) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [sku, name, category || 'General', stock_quantity || 0, min_stock || 10, unit_price || 0, supplier_id || null],
+  const { sku, name, category, stock_quantity, unlotified_stock, lotified_stock, min_stock, unit_price, supplier_id } = req.body;
+  
+  let unlotified = unlotified_stock !== undefined ? parseFloat(unlotified_stock) : 0;
+  let lotified = lotified_stock !== undefined ? parseFloat(lotified_stock) : 0;
+  let totalStock = stock_quantity !== undefined ? parseFloat(stock_quantity) : (unlotified + lotified);
+  
+  if (unlotified === 0 && lotified === 0 && totalStock > 0) {
+    unlotified = totalStock;
+  }
+
+  db.run(`INSERT INTO products (sku, name, category, stock_quantity, unlotified_stock, lotified_stock, min_stock, unit_price, supplier_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [sku, name, category || 'General', totalStock, unlotified, lotified, min_stock || 10, unit_price || 0, supplier_id || null],
     function(err) {
       if (err) return res.status(400).json({ error: err.message });
       const newId = this.lastID;
@@ -404,24 +419,35 @@ app.post('/api/products', (req, res) => {
 // 3. Modificar producto / Editar stock (Soporta PUT, POST, /api/products/:id y /api/productos/:id)
 const handleProductUpdate = (req, res) => {
   const id = req.params.id;
-  const { name, category, stock_quantity, min_stock, unit_price, user_name, stock } = req.body;
+  const { name, category, stock_quantity, unlotified_stock, lotified_stock, min_stock, unit_price, user_name, stock } = req.body;
 
   db.get(`SELECT * FROM products WHERE id = ?`, [id], (err, prod) => {
     if (!prod) return res.status(404).json({ error: 'Producto no encontrado' });
 
     const newName = name !== undefined ? name : prod.name;
     const newCategory = category !== undefined ? category : prod.category;
-    const newStock = stock_quantity !== undefined ? parseFloat(stock_quantity) : (stock !== undefined ? parseFloat(stock) : prod.stock_quantity);
+    
+    let newUnlotified = unlotified_stock !== undefined ? parseFloat(unlotified_stock) : (prod.unlotified_stock || 0);
+    let newLotified = lotified_stock !== undefined ? parseFloat(lotified_stock) : (prod.lotified_stock || 0);
+    
+    let newStock = stock_quantity !== undefined 
+      ? parseFloat(stock_quantity) 
+      : (stock !== undefined ? parseFloat(stock) : (unlotified_stock !== undefined || lotified_stock !== undefined ? (newUnlotified + newLotified) : prod.stock_quantity));
+      
+    if (unlotified_stock === undefined && lotified_stock === undefined && stock !== undefined) {
+      newUnlotified = newStock;
+    }
+
     const newMin = min_stock !== undefined ? parseFloat(min_stock) : prod.min_stock;
     const newPrice = unit_price !== undefined ? parseFloat(unit_price) : prod.unit_price;
     const user = user_name || 'Operador Android';
 
-    db.run(`UPDATE products SET name = ?, category = ?, stock_quantity = ?, min_stock = ?, unit_price = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-      [newName, newCategory, newStock, newMin, newPrice, id],
+    db.run(`UPDATE products SET name = ?, category = ?, stock_quantity = ?, unlotified_stock = ?, lotified_stock = ?, min_stock = ?, unit_price = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+      [newName, newCategory, newStock, newUnlotified, newLotified, newMin, newPrice, id],
       function(err) {
         if (err) return res.status(500).json({ error: err.message });
         
-        const details = `Categoría: ${prod.category} -> ${newCategory}, Stock: ${prod.stock_quantity} -> ${newStock}, Precio: $${prod.unit_price} -> $${newPrice}`;
+        const details = `Categoría: ${prod.category} -> ${newCategory}, Stock: ${prod.stock_quantity} -> ${newStock} (Sin Lotificar: ${newUnlotified}, Lotificadas: ${newLotified}), Precio: $${prod.unit_price} -> $${newPrice}`;
         logAudit('Product', id, 'ACTUALIZAR', details, user);
 
         db.get(`SELECT * FROM products WHERE id = ?`, [id], (e, updatedProd) => {

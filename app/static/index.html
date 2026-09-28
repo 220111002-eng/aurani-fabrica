@@ -210,14 +210,15 @@
             <table class="w-full text-left text-sm text-slate-700">
               <thead class="bg-amber-50/60 text-xs uppercase tracking-wider text-amber-900 border-b border-amber-100 font-bold">
                 <tr>
-                  <th class="px-5 py-3">SKU</th>
-                  <th class="px-5 py-3">Material de Empaque</th>
-                  <th class="px-5 py-3">Categoría</th>
-                  <th class="px-5 py-3 text-center">Stock Actual</th>
-                  <th class="px-5 py-3 text-center">Stock Mínimo</th>
-                  <th class="px-5 py-3 text-right">Precio Unitario</th>
-                  <th class="px-5 py-3 text-center">Estado</th>
-                  <th class="px-5 py-3 text-center">Acciones</th>
+                  <th class="px-4 py-3">SKU</th>
+                  <th class="px-4 py-3">Material / Envase (Zona 16)</th>
+                  <th class="px-4 py-3 text-center text-amber-900 font-extrabold bg-amber-100/50">Piezas Sin Lotificar</th>
+                  <th class="px-4 py-3 text-center text-purple-900 font-extrabold bg-purple-100/50">Piezas Lotificadas</th>
+                  <th class="px-4 py-3 text-center font-extrabold">Stock Total</th>
+                  <th class="px-4 py-3 text-center">Mínimo Alerta</th>
+                  <th class="px-4 py-3 text-right">Precio Unitario</th>
+                  <th class="px-4 py-3 text-center">Estado</th>
+                  <th class="px-4 py-3 text-center">Acciones</th>
                 </tr>
               </thead>
               <tbody id="table-empaque" class="divide-y divide-amber-50">
@@ -341,7 +342,7 @@
     <div class="bg-white border border-pink-100 rounded-2xl p-6 max-w-md w-full space-y-4 shadow-2xl">
       <h3 class="text-lg font-bold text-aurani-magenta flex items-center space-x-2">
         <i class="fa-solid fa-plus-circle"></i>
-        <span>Agregar Nuevo Insumo</span>
+        <span id="add-modal-title">Agregar Nuevo Insumo</span>
       </h3>
 
       <form id="add-product-form" onsubmit="handleAddSubmit(event)" class="space-y-3">
@@ -352,7 +353,7 @@
           </div>
           <div>
             <label class="block text-xs font-bold text-slate-600">Categoría / Área</label>
-            <select id="add-prod-category" required class="w-full px-3 py-2 bg-pink-50/60 border border-pink-200 rounded-xl text-xs font-bold text-aurani-magenta">
+            <select id="add-prod-category" onchange="toggleAddModalCategory(this.value)" required class="w-full px-3 py-2 bg-pink-50/60 border border-pink-200 rounded-xl text-xs font-bold text-aurani-magenta">
               <option value="Materias Primas">🧪 Materias Primas</option>
               <option value="Material de Empaque y Embalaje">📦 Material de Empaque y Embalaje</option>
               <option value="Muestras">🎁 Muestras</option>
@@ -362,17 +363,35 @@
         </div>
 
         <div>
-          <label class="block text-xs font-bold text-slate-600">Nombre del Producto</label>
-          <input type="text" id="add-prod-name" required placeholder="Ej: Lámina de Aluminio 2mm" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+          <label class="block text-xs font-bold text-slate-600">Nombre del Producto / Envase</label>
+          <input type="text" id="add-prod-name" required placeholder="Ej: Bolsa Stand up / Caja Grande" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+        </div>
+
+        <!-- Campos de Lotificación para Material de Empaque -->
+        <div id="add-lotification-container" class="p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-2 hidden">
+          <span class="text-xs font-bold text-amber-900 flex items-center space-x-1">
+            <i class="fa-solid fa-boxes-packing text-amber-600"></i>
+            <span>Desglose de Lotificación de Empaque:</span>
+          </span>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[11px] font-bold text-amber-800">Piezas Sin Lotificar</label>
+              <input type="number" step="1" id="add-prod-unlotified" value="0" oninput="calcAddTotalStock()" class="w-full px-2.5 py-1.5 bg-white border border-amber-300 rounded-lg text-xs font-bold text-slate-800">
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-amber-800">Piezas Lotificadas</label>
+              <input type="number" step="1" id="add-prod-lotified" value="0" oninput="calcAddTotalStock()" class="w-full px-2.5 py-1.5 bg-white border border-amber-300 rounded-lg text-xs font-bold text-slate-800">
+            </div>
+          </div>
         </div>
 
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-bold text-slate-600">Stock Inicial</label>
+            <label id="add-label-stock" class="block text-xs font-bold text-slate-600">Stock Total</label>
             <input type="number" step="0.1" id="add-prod-stock" value="10" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold">
           </div>
           <div>
-            <label class="block text-xs font-bold text-slate-600">Stock Mínimo</label>
+            <label id="add-label-min" class="block text-xs font-bold text-slate-600">Mínimo de Alerta (KG / PZ)</label>
             <input type="number" step="0.1" id="add-prod-min" value="5" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
           </div>
         </div>
@@ -408,12 +427,12 @@
 
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-bold text-slate-600">Nombre del Producto</label>
+            <label class="block text-xs font-bold text-slate-600">Nombre del Producto / Envase</label>
             <input type="text" id="edit-prod-name" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
           </div>
           <div>
             <label class="block text-xs font-bold text-slate-600">Categoría / Área</label>
-            <select id="edit-prod-category" required class="w-full px-3 py-2 bg-pink-50/60 border border-pink-200 rounded-xl text-xs font-bold text-aurani-magenta">
+            <select id="edit-prod-category" onchange="toggleEditModalCategory(this.value)" required class="w-full px-3 py-2 bg-pink-50/60 border border-pink-200 rounded-xl text-xs font-bold text-aurani-magenta">
               <option value="Materias Primas">🧪 Materias Primas</option>
               <option value="Material de Empaque y Embalaje">📦 Material de Empaque y Embalaje</option>
               <option value="Muestras">🎁 Muestras</option>
@@ -422,13 +441,31 @@
           </div>
         </div>
 
+        <!-- Campos de Lotificación para Material de Empaque en Edición -->
+        <div id="edit-lotification-container" class="p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-2 hidden">
+          <span class="text-xs font-bold text-amber-900 flex items-center space-x-1">
+            <i class="fa-solid fa-boxes-packing text-amber-600"></i>
+            <span>Desglose de Lotificación de Empaque:</span>
+          </span>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[11px] font-bold text-amber-800">Piezas Sin Lotificar</label>
+              <input type="number" step="1" id="edit-prod-unlotified" value="0" oninput="calcEditTotalStock()" class="w-full px-2.5 py-1.5 bg-white border border-amber-300 rounded-lg text-xs font-bold text-slate-800">
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-amber-800">Piezas Lotificadas</label>
+              <input type="number" step="1" id="edit-prod-lotified" value="0" oninput="calcEditTotalStock()" class="w-full px-2.5 py-1.5 bg-white border border-amber-300 rounded-lg text-xs font-bold text-slate-800">
+            </div>
+          </div>
+        </div>
+
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-bold text-slate-600">Stock Actual</label>
+            <label id="edit-label-stock" class="block text-xs font-bold text-slate-600">Stock Total</label>
             <input type="number" step="0.1" id="edit-prod-stock" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold">
           </div>
           <div>
-            <label class="block text-xs font-bold text-slate-600">Stock Mínimo</label>
+            <label id="edit-label-min" class="block text-xs font-bold text-slate-600">Mínimo de Alerta (KG / PZ)</label>
             <input type="number" step="0.1" id="edit-prod-min" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
           </div>
         </div>
@@ -523,7 +560,30 @@
           tbodyMuestras.innerHTML += rowHtml;
           countMuestras++;
         } else if (catLower.includes('empaque') || catLower.includes('embalaje')) {
-          tbodyEmpaque.innerHTML += rowHtml;
+          const unlotified = p.unlotified_stock !== undefined && p.unlotified_stock !== null ? p.unlotified_stock : p.stock_quantity;
+          const lotified = p.lotified_stock !== undefined && p.lotified_stock !== null ? p.lotified_stock : 0;
+          
+          const rowEmpaqueHtml = `
+            <tr class="hover:bg-amber-50/40 transition-colors text-xs">
+              <td class="px-4 py-3 font-mono font-bold text-amber-800">${p.sku}</td>
+              <td class="px-4 py-3 font-bold text-slate-800 text-sm">${p.name}</td>
+              <td class="px-4 py-3 text-center font-extrabold text-amber-900 bg-amber-50/50 text-sm">${unlotified}</td>
+              <td class="px-4 py-3 text-center font-extrabold text-purple-900 bg-purple-50/50 text-sm">${lotified}</td>
+              <td class="px-4 py-3 text-center font-extrabold text-base ${isCritical ? 'text-rose-600' : 'text-slate-800'}">${p.stock_quantity}</td>
+              <td class="px-4 py-3 text-center text-slate-400 font-semibold">${p.min_stock}</td>
+              <td class="px-4 py-3 text-right font-mono font-bold text-emerald-700 text-sm">$${p.unit_price.toLocaleString('es-MX', {minimumFractionDigits: 2})}</td>
+              <td class="px-4 py-3 text-center">${statusBadge}</td>
+              <td class="px-4 py-3 text-center space-x-1">
+                <button onclick="openEditModal(${p.id})" class="px-3 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg text-xs font-bold border border-amber-300">
+                  <i class="fa-solid fa-pen"></i> Editar
+                </button>
+                <button onclick="deleteProduct(${p.id}, '${p.name.replace(/'/g, "\\'")}')" class="px-3 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-xs font-bold border border-rose-200">
+                  <i class="fa-solid fa-trash"></i>
+                </button>
+              </td>
+            </tr>
+          `;
+          tbodyEmpaque.innerHTML += rowEmpaqueHtml;
           countEmpaque++;
         } else {
           tbodyMP.innerHTML += rowHtml;
@@ -538,7 +598,7 @@
         tbodyMuestras.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-xs text-purple-400 font-bold">No hay productos de muestra registrados aún. Haz clic en "+ Agregar Producto de Muestra" para registrar uno.</td></tr>`;
       }
       if (countEmpaque === 0) {
-        tbodyEmpaque.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-xs text-amber-500 font-bold">No hay materiales de empaque o embalaje registrados aún. Haz clic en "+ Agregar Material de Empaque" para registrar uno.</td></tr>`;
+        tbodyEmpaque.innerHTML = `<tr><td colspan="9" class="text-center py-6 text-xs text-amber-600 font-bold">No hay materiales de empaque o embalaje registrados aún. Haz clic en "+ Agregar Material de Empaque" para registrar uno.</td></tr>`;
       }
     }
 
@@ -721,9 +781,61 @@
       }
     }
 
+    function toggleAddModalCategory(cat) {
+      const isEmpaque = cat.includes('Empaque') || cat.includes('Embalaje');
+      const container = document.getElementById('add-lotification-container');
+      const labelMin = document.getElementById('add-label-min');
+      const labelStock = document.getElementById('add-label-stock');
+      const modalTitle = document.getElementById('add-modal-title');
+
+      if (isEmpaque) {
+        if (container) container.classList.remove('hidden');
+        if (labelMin) labelMin.innerText = "Mínimo de Alerta (KG / PZ)";
+        if (labelStock) labelStock.innerText = "Stock Total (Piezas)";
+        if (modalTitle) modalTitle.innerText = "Agregar Material de Empaque (Zona 16)";
+        calcAddTotalStock();
+      } else {
+        if (container) container.classList.add('hidden');
+        if (labelMin) labelMin.innerText = "Stock Mínimo";
+        if (labelStock) labelStock.innerText = "Stock Inicial";
+        if (modalTitle) modalTitle.innerText = "Agregar Nuevo Insumo";
+      }
+    }
+
+    function calcAddTotalStock() {
+      const unlotified = parseFloat(document.getElementById('add-prod-unlotified').value) || 0;
+      const lotified = parseFloat(document.getElementById('add-prod-lotified').value) || 0;
+      document.getElementById('add-prod-stock').value = unlotified + lotified;
+    }
+
+    function toggleEditModalCategory(cat) {
+      const isEmpaque = cat.includes('Empaque') || cat.includes('Embalaje');
+      const container = document.getElementById('edit-lotification-container');
+      const labelMin = document.getElementById('edit-label-min');
+      const labelStock = document.getElementById('edit-label-stock');
+
+      if (isEmpaque) {
+        if (container) container.classList.remove('hidden');
+        if (labelMin) labelMin.innerText = "Mínimo de Alerta (KG / PZ)";
+        if (labelStock) labelStock.innerText = "Stock Total (Piezas)";
+        calcEditTotalStock();
+      } else {
+        if (container) container.classList.add('hidden');
+        if (labelMin) labelMin.innerText = "Stock Mínimo";
+        if (labelStock) labelStock.innerText = "Stock Actual";
+      }
+    }
+
+    function calcEditTotalStock() {
+      const unlotified = parseFloat(document.getElementById('edit-prod-unlotified').value) || 0;
+      const lotified = parseFloat(document.getElementById('edit-prod-lotified').value) || 0;
+      document.getElementById('edit-prod-stock').value = unlotified + lotified;
+    }
+
     function openAddProductModal(defaultCategory = 'Materias Primas') {
       if (document.getElementById('add-prod-category')) {
         document.getElementById('add-prod-category').value = defaultCategory;
+        toggleAddModalCategory(defaultCategory);
       }
       document.getElementById('add-modal').classList.remove('hidden');
     }
@@ -747,6 +859,8 @@
         category: category || 'General',
         name: name,
         stock_quantity: parseFloat(document.getElementById('add-prod-stock').value) || 0,
+        unlotified_stock: parseFloat(document.getElementById('add-prod-unlotified').value) || 0,
+        lotified_stock: parseFloat(document.getElementById('add-prod-lotified').value) || 0,
         min_stock: parseFloat(document.getElementById('add-prod-min').value) || 0,
         unit_price: parseFloat(document.getElementById('add-prod-price').value) || 0,
         user_name: document.getElementById('add-user-name').value.trim() || 'Administrador'
@@ -778,12 +892,16 @@
       if (!prod) return;
       document.getElementById('edit-prod-id').value = prod.id;
       document.getElementById('edit-prod-name').value = prod.name;
+      const cat = prod.category || 'General';
       if (document.getElementById('edit-prod-category')) {
-        document.getElementById('edit-prod-category').value = prod.category || 'General';
+        document.getElementById('edit-prod-category').value = cat;
       }
+      document.getElementById('edit-prod-unlotified').value = prod.unlotified_stock !== undefined && prod.unlotified_stock !== null ? prod.unlotified_stock : prod.stock_quantity;
+      document.getElementById('edit-prod-lotified').value = prod.lotified_stock !== undefined && prod.lotified_stock !== null ? prod.lotified_stock : 0;
       document.getElementById('edit-prod-stock').value = prod.stock_quantity;
       document.getElementById('edit-prod-min').value = prod.min_stock;
       document.getElementById('edit-prod-price').value = prod.unit_price;
+      toggleEditModalCategory(cat);
       document.getElementById('edit-modal').classList.remove('hidden');
     }
 
@@ -798,6 +916,8 @@
         name: document.getElementById('edit-prod-name').value,
         category: document.getElementById('edit-prod-category') ? document.getElementById('edit-prod-category').value : 'General',
         stock_quantity: parseFloat(document.getElementById('edit-prod-stock').value),
+        unlotified_stock: parseFloat(document.getElementById('edit-prod-unlotified').value) || 0,
+        lotified_stock: parseFloat(document.getElementById('edit-prod-lotified').value) || 0,
         min_stock: parseFloat(document.getElementById('edit-prod-min').value),
         unit_price: parseFloat(document.getElementById('edit-prod-price').value),
         user_name: document.getElementById('edit-user-name').value
