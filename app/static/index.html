@@ -71,19 +71,31 @@
     <!-- Alertas Activas Banner -->
     <div id="alerts-container" class="hidden space-y-2"></div>
 
-    <!-- Pestañas de Navegación -->
-    <div class="border-b border-pink-200 flex space-x-8 text-sm font-bold">
-      <button onclick="switchTab('tab-inventory')" id="btn-inventory" class="pb-3 border-b-2 border-aurani-magenta text-aurani-magenta flex items-center space-x-2">
+    <!-- Pestañas de Navegación Superior -->
+    <div class="border-b border-pink-200 flex space-x-4 sm:space-x-8 text-sm font-bold overflow-x-auto no-scrollbar pb-1">
+      <button onclick="switchTab('tab-inventory')" id="btn-inventory" class="pb-3 border-b-2 border-aurani-magenta text-aurani-magenta flex items-center space-x-2 whitespace-nowrap">
         <i class="fa-solid fa-boxes-stacked"></i>
-        <span>Inventario y Control de Stock</span>
+        <span>📦 Todo el Inventario</span>
       </button>
-      <button onclick="switchTab('tab-ai')" id="btn-ai" class="pb-3 border-b-2 border-transparent text-slate-500 hover:text-aurani-magenta flex items-center space-x-2">
+      <button onclick="switchTab('tab-materias-primas')" id="btn-materias-primas" class="pb-3 border-b-2 border-transparent text-slate-500 hover:text-aurani-magenta flex items-center space-x-2 whitespace-nowrap">
+        <i class="fa-solid fa-vial-virus text-pink-600"></i>
+        <span>🧪 Materias Primas</span>
+      </button>
+      <button onclick="switchTab('tab-muestras')" id="btn-muestras" class="pb-3 border-b-2 border-transparent text-slate-500 hover:text-aurani-magenta flex items-center space-x-2 whitespace-nowrap">
+        <i class="fa-solid fa-vial-circle-check text-purple-600"></i>
+        <span>🎁 Productos de Muestra</span>
+      </button>
+      <button onclick="switchTab('tab-empaque')" id="btn-empaque" class="pb-3 border-b-2 border-transparent text-slate-500 hover:text-aurani-magenta flex items-center space-x-2 whitespace-nowrap">
+        <i class="fa-solid fa-box-open text-amber-600"></i>
+        <span>📦 Material de Empaque</span>
+      </button>
+      <button onclick="switchTab('tab-ai')" id="btn-ai" class="pb-3 border-b-2 border-transparent text-slate-500 hover:text-aurani-magenta flex items-center space-x-2 whitespace-nowrap">
         <i class="fa-solid fa-wand-magic-sparkles text-aurani-green"></i>
-        <span>Ingesta de Cotizaciones con IA</span>
+        <span>Cotizaciones con IA</span>
       </button>
-      <button onclick="switchTab('tab-audit')" id="btn-audit" class="pb-3 border-b-2 border-transparent text-slate-500 hover:text-aurani-magenta flex items-center space-x-2">
+      <button onclick="switchTab('tab-audit')" id="btn-audit" class="pb-3 border-b-2 border-transparent text-slate-500 hover:text-aurani-magenta flex items-center space-x-2 whitespace-nowrap">
         <i class="fa-solid fa-clock-rotate-left text-indigo-500"></i>
-        <span>Historial de Auditoría y Usuarios</span>
+        <span>Historial y Usuarios</span>
       </button>
     </div>
 
@@ -112,7 +124,7 @@
       </div>
 
       <!-- SECCIÓN 1: MATERIAS PRIMAS -->
-      <div class="space-y-3">
+      <div id="sec-materias-primas" class="space-y-3">
         <div class="flex justify-between items-center">
           <h3 class="text-base font-bold text-aurani-magenta flex items-center space-x-2">
             <i class="fa-solid fa-vial-virus text-aurani-magenta"></i>
@@ -147,7 +159,7 @@
       </div>
 
       <!-- SECCIÓN 2: PRODUCTOS DE MUESTRA -->
-      <div class="space-y-3 pt-4 border-t border-pink-100">
+      <div id="sec-muestras" class="space-y-3 pt-4 border-t border-pink-100">
         <div class="flex justify-between items-center">
           <h3 class="text-base font-bold text-purple-700 flex items-center space-x-2">
             <i class="fa-solid fa-vial-circle-check text-purple-600"></i>
@@ -182,7 +194,7 @@
       </div>
 
       <!-- SECCIÓN 3: EMPAQUE Y EMBALAJE -->
-      <div class="space-y-3 pt-4 border-t border-pink-100">
+      <div id="sec-empaque" class="space-y-3 pt-4 border-t border-pink-100">
         <div class="flex justify-between items-center">
           <h3 class="text-base font-bold text-amber-800 flex items-center space-x-2">
             <i class="fa-solid fa-box-open text-amber-600"></i>
@@ -804,23 +816,51 @@
     }
 
     function switchTab(tabId) {
-      ['tab-inventory', 'tab-ai', 'tab-audit'].forEach(id => {
-        document.getElementById(id).classList.add('hidden');
-      });
-      document.getElementById(tabId).classList.remove('hidden');
+      const isCategoryFilter = ['tab-materias-primas', 'tab-muestras', 'tab-empaque'].includes(tabId);
+      
+      if (tabId === 'tab-inventory' || isCategoryFilter) {
+        document.getElementById('tab-inventory').classList.remove('hidden');
+        document.getElementById('tab-ai').classList.add('hidden');
+        document.getElementById('tab-audit').classList.add('hidden');
+      } else {
+        document.getElementById('tab-inventory').classList.add('hidden');
+        document.getElementById('tab-ai').classList.toggle('hidden', tabId !== 'tab-ai');
+        document.getElementById('tab-audit').classList.toggle('hidden', tabId !== 'tab-audit');
+      }
 
-      const btns = {
-        'tab-inventory': 'btn-inventory',
-        'tab-ai': 'btn-ai',
-        'tab-audit': 'btn-audit'
-      };
+      const secMP = document.getElementById('sec-materias-primas');
+      const secMuestras = document.getElementById('sec-muestras');
+      const secEmpaque = document.getElementById('sec-empaque');
 
-      Object.keys(btns).forEach(key => {
-        const b = document.getElementById(btns[key]);
-        if (key === tabId) {
-          b.className = "pb-3 border-b-2 border-aurani-magenta text-aurani-magenta flex items-center space-x-2 font-bold";
+      if (secMP && secMuestras && secEmpaque) {
+        if (tabId === 'tab-inventory') {
+          secMP.classList.remove('hidden');
+          secMuestras.classList.remove('hidden');
+          secEmpaque.classList.remove('hidden');
+        } else if (tabId === 'tab-materias-primas') {
+          secMP.classList.remove('hidden');
+          secMuestras.classList.add('hidden');
+          secEmpaque.classList.add('hidden');
+        } else if (tabId === 'tab-muestras') {
+          secMP.classList.add('hidden');
+          secMuestras.classList.remove('hidden');
+          secEmpaque.classList.add('hidden');
+        } else if (tabId === 'tab-empaque') {
+          secMP.classList.add('hidden');
+          secMuestras.classList.add('hidden');
+          secEmpaque.classList.remove('hidden');
+        }
+      }
+
+      const btns = ['btn-inventory', 'btn-materias-primas', 'btn-muestras', 'btn-empaque', 'btn-ai', 'btn-audit'];
+      btns.forEach(bId => {
+        const b = document.getElementById(bId);
+        if (!b) return;
+        const targetTab = bId.replace('btn-', 'tab-');
+        if (targetTab === tabId) {
+          b.className = "pb-3 border-b-2 border-aurani-magenta text-aurani-magenta flex items-center space-x-2 font-bold whitespace-nowrap";
         } else {
-          b.className = "pb-3 border-b-2 border-transparent text-slate-500 hover:text-aurani-magenta flex items-center space-x-2 font-bold";
+          b.className = "pb-3 border-b-2 border-transparent text-slate-500 hover:text-aurani-magenta flex items-center space-x-2 font-bold whitespace-nowrap";
         }
       });
     }
