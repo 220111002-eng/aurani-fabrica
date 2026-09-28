@@ -383,18 +383,18 @@ app.post('/api/products', (req, res) => {
   );
 });
 
-// 3. Modificar producto / Editar stock desde App Android
-app.put('/api/products/:id', (req, res) => {
+// 3. Modificar producto / Editar stock (Soporta PUT, POST, /api/products/:id y /api/productos/:id)
+const handleProductUpdate = (req, res) => {
   const id = req.params.id;
-  const { name, stock_quantity, min_stock, unit_price, user_name } = req.body;
+  const { name, stock_quantity, min_stock, unit_price, user_name, stock } = req.body;
 
   db.get(`SELECT * FROM products WHERE id = ?`, [id], (err, prod) => {
     if (!prod) return res.status(404).json({ error: 'Producto no encontrado' });
 
     const newName = name !== undefined ? name : prod.name;
-    const newStock = stock_quantity !== undefined ? stock_quantity : prod.stock_quantity;
-    const newMin = min_stock !== undefined ? min_stock : prod.min_stock;
-    const newPrice = unit_price !== undefined ? unit_price : prod.unit_price;
+    const newStock = stock_quantity !== undefined ? parseFloat(stock_quantity) : (stock !== undefined ? parseFloat(stock) : prod.stock_quantity);
+    const newMin = min_stock !== undefined ? parseFloat(min_stock) : prod.min_stock;
+    const newPrice = unit_price !== undefined ? parseFloat(unit_price) : prod.unit_price;
     const user = user_name || 'Operador Android';
 
     db.run(`UPDATE products SET name = ?, stock_quantity = ?, min_stock = ?, unit_price = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
@@ -412,7 +412,12 @@ app.put('/api/products/:id', (req, res) => {
       }
     );
   });
-});
+};
+
+app.put('/api/products/:id', handleProductUpdate);
+app.post('/api/products/:id', handleProductUpdate);
+app.put('/api/productos/:id', handleProductUpdate);
+app.post('/api/productos/:id', handleProductUpdate);
 
 // 3b. Eliminar producto
 app.delete('/api/products/:id', (req, res) => {
