@@ -498,6 +498,17 @@ app.get('/api/download-db', (req, res) => {
   res.download(dbFile, 'sistema_fabrica_node.db');
 });
 
+// Keep-Alive Heartbeat: Evita que Render entre en modo suspensión (Spin Down)
+const RENDER_URL = 'https://aurani-fabrica.onrender.com/api/products';
+setInterval(() => {
+  const https = require('https');
+  https.get(RENDER_URL, (res) => {
+    console.log('💓 Heartbeat Keep-Alive ejecutado:', res.statusCode);
+  }).on('error', (err) => {
+    console.log('Heartbeat error:', err.message);
+  });
+}, 10 * 60 * 1000); // Cada 10 minutos
+
 // Arrancar Servidor Node.js
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Servidor Node.js (Express) corriendo en el puerto ${PORT}`);
