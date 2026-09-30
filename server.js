@@ -84,6 +84,60 @@ db.serialize(() => {
   db.run("ALTER TABLE products ADD COLUMN unlotified_stock REAL DEFAULT 0.0", () => {});
   db.run("ALTER TABLE products ADD COLUMN lotified_stock REAL DEFAULT 0.0", () => {});
 
+  // Auto-cargar catálogo de Empaque (Zona 16) y Muestras si la base de datos no los tiene aún
+  db.get(`SELECT COUNT(*) as count FROM products WHERE category LIKE '%Empaque%' OR category LIKE '%Muestra%'`, (err, row) => {
+    if (!row || row.count === 0) {
+      console.log("🌱 Cargando catálogo inicial de Material de Empaque y Muestras...");
+      
+      const initialProducts = [
+        { sku: "EMP-001", name: "Granola proteica frutos secos", category: "Material de Empaque y Embalaje", unlotified_stock: 600, lotified_stock: 0, stock_quantity: 600, min_stock: 1000, unit_price: 15.00 },
+        { sku: "EMP-002", name: "Granola proteica cocoa (Moradas)", category: "Material de Empaque y Embalaje", unlotified_stock: 750, lotified_stock: 0, stock_quantity: 750, min_stock: 1000, unit_price: 15.00 },
+        { sku: "EMP-003", name: "Granola proteica Cocoa (Rosas)", category: "Material de Empaque y Embalaje", unlotified_stock: 0, lotified_stock: 0, stock_quantity: 0, min_stock: 1000, unit_price: 15.00 },
+        { sku: "EMP-004", name: "Rebel HC proteicos", category: "Material de Empaque y Embalaje", unlotified_stock: 3000, lotified_stock: 0, stock_quantity: 3000, min_stock: 1000, unit_price: 12.00 },
+        { sku: "EMP-005", name: "HC Original", category: "Material de Empaque y Embalaje", unlotified_stock: 1200, lotified_stock: 0, stock_quantity: 1200, min_stock: 6000, unit_price: 12.00 },
+        { sku: "EMP-006", name: "HC Matcha", category: "Material de Empaque y Embalaje", unlotified_stock: 0, lotified_stock: 0, stock_quantity: 0, min_stock: 4500, unit_price: 12.00 },
+        { sku: "EMP-007", name: "HC Golden Milk", category: "Material de Empaque y Embalaje", unlotified_stock: 2500, lotified_stock: 2500, stock_quantity: 5000, min_stock: 4000, unit_price: 12.00 },
+        { sku: "EMP-008", name: "Mango 40g", category: "Material de Empaque y Embalaje", unlotified_stock: 99990, lotified_stock: 0, stock_quantity: 99990, min_stock: 10000, unit_price: 8.50 },
+        { sku: "EMP-009", name: "Piña 40g", category: "Material de Empaque y Embalaje", unlotified_stock: 79990, lotified_stock: 0, stock_quantity: 79990, min_stock: 10000, unit_price: 8.50 },
+        { sku: "EMP-010", name: "Mango natural 90g", category: "Material de Empaque y Embalaje", unlotified_stock: 179, lotified_stock: 0, stock_quantity: 179, min_stock: 500, unit_price: 14.00 },
+        { sku: "EMP-011", name: "Mango enchilado 90g", category: "Material de Empaque y Embalaje", unlotified_stock: 3000, lotified_stock: 0, stock_quantity: 3000, min_stock: 2000, unit_price: 14.00 },
+        { sku: "EMP-012", name: "Piña Natural", category: "Material de Empaque y Embalaje", unlotified_stock: 2250, lotified_stock: 920, stock_quantity: 3170, min_stock: 2000, unit_price: 14.00 },
+        { sku: "EMP-013", name: "Piña enchilada", category: "Material de Empaque y Embalaje", unlotified_stock: 0, lotified_stock: 0, stock_quantity: 0, min_stock: 2000, unit_price: 14.00 },
+        { sku: "EMP-014", name: "TMA", category: "Material de Empaque y Embalaje", unlotified_stock: 1850, lotified_stock: 0, stock_quantity: 1850, min_stock: 500, unit_price: 10.00 },
+        { sku: "EMP-015", name: "TMO", category: "Material de Empaque y Embalaje", unlotified_stock: 1560, lotified_stock: 0, stock_quantity: 1560, min_stock: 1000, unit_price: 10.00 },
+        { sku: "EMP-016", name: "TMP", category: "Material de Empaque y Embalaje", unlotified_stock: 2800, lotified_stock: 0, stock_quantity: 2800, min_stock: 500, unit_price: 10.00 },
+        { sku: "EMP-017", name: "Jugo verde", category: "Material de Empaque y Embalaje", unlotified_stock: 0, lotified_stock: 0, stock_quantity: 0, min_stock: 1000, unit_price: 12.00 },
+        { sku: "EMP-018", name: "Golden Milk", category: "Material de Empaque y Embalaje", unlotified_stock: 900, lotified_stock: 0, stock_quantity: 900, min_stock: 1000, unit_price: 12.00 },
+        { sku: "EMP-019", name: "Caja Grande", category: "Material de Empaque y Embalaje", unlotified_stock: 1000, lotified_stock: 0, stock_quantity: 1000, min_stock: 200, unit_price: 25.00 },
+        { sku: "EMP-020", name: "Caja 3 bolsas", category: "Material de Empaque y Embalaje", unlotified_stock: 400, lotified_stock: 0, stock_quantity: 400, min_stock: 100, unit_price: 18.00 },
+        { sku: "EMP-021", name: "Caja bonsai 40g", category: "Material de Empaque y Embalaje", unlotified_stock: 1900, lotified_stock: 0, stock_quantity: 1900, min_stock: 300, unit_price: 15.00 },
+        { sku: "EMP-022", name: "Caja bonsai 90g", category: "Material de Empaque y Embalaje", unlotified_stock: 8400, lotified_stock: 0, stock_quantity: 8400, min_stock: 300, unit_price: 18.00 },
+        { sku: "EMP-023", name: "Caja Hot Cakes", category: "Material de Empaque y Embalaje", unlotified_stock: 0, lotified_stock: 0, stock_quantity: 0, min_stock: 400, unit_price: 20.00 },
+        { sku: "EMP-024", name: "Caja KHUMARA", category: "Material de Empaque y Embalaje", unlotified_stock: 1350, lotified_stock: 0, stock_quantity: 1350, min_stock: 300, unit_price: 22.00 },
+        { sku: "EMP-025", name: "Trail mix omega 35 g", category: "Material de Empaque y Embalaje", unlotified_stock: 32990, lotified_stock: 0, stock_quantity: 32990, min_stock: 5000, unit_price: 7.50 },
+        { sku: "EMP-026", name: "Trail mix proteina 35 g", category: "Material de Empaque y Embalaje", unlotified_stock: 32990, lotified_stock: 0, stock_quantity: 32990, min_stock: 5000, unit_price: 7.50 },
+        { sku: "EMP-027", name: "Trail mix antioxidante 35 g", category: "Material de Empaque y Embalaje", unlotified_stock: 32990, lotified_stock: 0, stock_quantity: 32990, min_stock: 5000, unit_price: 7.50 },
+        { sku: "EMP-028", name: "Volta canela Manzana", category: "Material de Empaque y Embalaje", unlotified_stock: 622, lotified_stock: 0, stock_quantity: 622, min_stock: 200, unit_price: 10.00 },
+        { sku: "EMP-029", name: "Volta Pistache", category: "Material de Empaque y Embalaje", unlotified_stock: 650, lotified_stock: 0, stock_quantity: 650, min_stock: 200, unit_price: 10.00 },
+        { sku: "EMP-030", name: "HC cocoa", category: "Material de Empaque y Embalaje", unlotified_stock: 20500, lotified_stock: 1500, stock_quantity: 22000, min_stock: 6000, unit_price: 12.00 },
+        { sku: "EMP-031", name: "Malteada de grillo", category: "Material de Empaque y Embalaje", unlotified_stock: 0, lotified_stock: 0, stock_quantity: 0, min_stock: 500, unit_price: 15.00 },
+        { sku: "EMP-032", name: "DISPLAY Pistache", category: "Material de Empaque y Embalaje", unlotified_stock: 19, lotified_stock: 0, stock_quantity: 19, min_stock: 10, unit_price: 35.00 },
+        { sku: "EMP-033", name: "DISPLAY Manzana canela", category: "Material de Empaque y Embalaje", unlotified_stock: 38, lotified_stock: 0, stock_quantity: 38, min_stock: 10, unit_price: 35.00 },
+        { sku: "EMP-034", name: "Bolsa Stand up", category: "Material de Empaque y Embalaje", unlotified_stock: 60, lotified_stock: 8, stock_quantity: 68, min_stock: 50, unit_price: 5.00 },
+        { sku: "EMP-035", name: "Cintas", category: "Material de Empaque y Embalaje", unlotified_stock: 36, lotified_stock: 0, stock_quantity: 36, min_stock: 20, unit_price: 45.00 },
+        { sku: "EMP-036", name: "Protein Bites Peanut B & J", category: "Material de Empaque y Embalaje", unlotified_stock: 95, lotified_stock: 0, stock_quantity: 95, min_stock: 100, unit_price: 12.00 },
+        { sku: "MUE-001", name: "Muestra Granola Proteica 50g", category: "Muestras", unlotified_stock: 25, lotified_stock: 0, stock_quantity: 25, min_stock: 10, unit_price: 8.00 },
+        { sku: "MUE-002", name: "Muestra Proteína Vegetal Vainilla 30g", category: "Muestras", unlotified_stock: 40, lotified_stock: 0, stock_quantity: 40, min_stock: 10, unit_price: 10.00 }
+      ];
+
+      const stmt = db.prepare(`INSERT OR IGNORE INTO products (sku, name, category, unlotified_stock, lotified_stock, stock_quantity, min_stock, unit_price) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);
+      initialProducts.forEach(p => {
+        stmt.run([p.sku, p.name, p.category, p.unlotified_stock, p.lotified_stock, p.stock_quantity, p.min_stock, p.unit_price]);
+      });
+      stmt.finalize();
+    }
+  });
+
   db.run(`CREATE TABLE IF NOT EXISTS quotes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     supplier_name TEXT NOT NULL,
