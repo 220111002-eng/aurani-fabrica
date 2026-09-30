@@ -36,31 +36,26 @@
 </head>
 <body class="min-h-screen text-slate-800 flex flex-col">
 
-  <!-- Header / Navigation Estilo Minimalista Oficial Grupo Aurani -->
-  <header class="bg-white/95 backdrop-blur-md border-b border-slate-100 sticky top-0 z-50 px-6 py-3 flex flex-wrap justify-between items-center shadow-xs">
-    <div class="flex items-center space-x-3">
-      <!-- Logo Oficial sin marco/caja, discreto y limpio -->
-      <a href="/" class="flex items-center space-x-2.5 group">
-        <img src="/logo_aurani.png" alt="Aurani Cambiando Vidas" class="h-9 w-auto object-contain transition-transform group-hover:scale-105">
-        <span class="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200/80 tracking-wider">FÁBRICA 2.0</span>
+  <!-- Header / Navigation Estilo Ultra Elegante Oficial Grupo Aurani -->
+  <header class="bg-white/95 backdrop-blur-md border-b border-slate-100 sticky top-0 z-50 px-8 py-3.5 flex flex-wrap justify-between items-center shadow-xs">
+    <div class="flex items-center">
+      <!-- Solo la imagen del Logo Oficial sin textos redundantes -->
+      <a href="/" class="flex items-center group">
+        <img src="/logo_aurani.png" alt="Aurani Cambiando Vidas" class="h-10 w-auto object-contain transition-transform group-hover:opacity-90">
       </a>
-      <div class="hidden md:block h-4 w-[1px] bg-slate-200 mx-2"></div>
-      <p class="hidden md:block text-xs text-slate-500 font-medium">
-        Sistema Inteligente de Gestión de Insumos & IA
-      </p>
     </div>
 
-    <!-- Badges de Estado Discretos y Elegantes -->
-    <div class="flex items-center space-x-3 mt-2 sm:mt-0 text-xs font-semibold">
-      <div class="px-3 py-1.5 rounded-lg bg-slate-50 text-slate-700 border border-slate-200/80 flex items-center space-x-1.5">
+    <!-- Badges de Estado Discretos -->
+    <div class="flex items-center space-x-3 text-xs font-semibold">
+      <div class="px-3 py-1.5 rounded-full bg-slate-50 text-slate-700 border border-slate-200/80 flex items-center space-x-1.5">
         <i class="fa-solid fa-boxes-stacked text-aurani-magenta text-xs"></i>
         <span>Insumos: <strong id="stat-products" class="text-slate-900 ml-0.5">0</strong></span>
       </div>
-      <div class="px-3 py-1.5 rounded-lg bg-amber-50/70 text-amber-800 border border-amber-200/60 flex items-center space-x-1.5">
+      <div class="px-3 py-1.5 rounded-full bg-amber-50/70 text-amber-800 border border-amber-200/60 flex items-center space-x-1.5">
         <i class="fa-solid fa-bell text-amber-500 text-xs"></i>
         <span>Alertas: <strong id="stat-alerts" class="text-amber-900 ml-0.5">0</strong></span>
       </div>
-      <div class="px-3 py-1.5 rounded-lg bg-emerald-50/70 text-emerald-800 border border-emerald-200/60 flex items-center space-x-1.5">
+      <div class="px-3 py-1.5 rounded-full bg-emerald-50/70 text-emerald-800 border border-emerald-200/60 flex items-center space-x-1.5">
         <i class="fa-solid fa-wand-magic-sparkles text-aurani-green text-xs"></i>
         <span>IA: <strong id="stat-quotes" class="text-emerald-900 ml-0.5">0</strong></span>
       </div>
