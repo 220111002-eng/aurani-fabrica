@@ -71,6 +71,11 @@
 
     <!-- Pestañas de Navegación Superior -->
     <div class="border-b border-pink-200 flex space-x-4 sm:space-x-8 text-sm font-bold overflow-x-auto no-scrollbar pb-1">
+      <button onclick="switchTab('tab-critico')" id="btn-critico" class="pb-3 border-b-2 border-transparent text-rose-600 hover:text-rose-700 flex items-center space-x-2 whitespace-nowrap">
+        <i class="fa-solid fa-triangle-exclamation text-rose-500 animate-pulse"></i>
+        <span>🚨 Stock Crítico</span>
+        <span id="tab-badge-critico" class="px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 text-xs font-extrabold ml-1">0</span>
+      </button>
       <button onclick="switchTab('tab-inventory')" id="btn-inventory" class="pb-3 border-b-2 border-aurani-magenta text-aurani-magenta flex items-center space-x-2 whitespace-nowrap">
         <i class="fa-solid fa-boxes-stacked"></i>
         <span>📦 Todo el Inventario</span>
@@ -703,9 +708,16 @@
 
       let countMP = 0, countMuestras = 0, countEmpaque = 0;
 
+      const totalCritical = currentProducts.filter(p => p.stock_quantity <= p.min_stock).length;
+      const critBadge = document.getElementById('tab-badge-critico');
+      if (critBadge) critBadge.innerText = totalCritical;
+
       currentProducts.forEach(p => {
         const catLower = (p.category || 'General').toLowerCase().trim();
         const isCritical = p.stock_quantity <= p.min_stock;
+
+        if (activeCategory === 'CRITICO' && !isCritical) return;
+
         const statusBadge = isCritical
           ? `<span class="px-2.5 py-1 rounded-full bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold flex items-center space-x-1 justify-center"><i class="fa-solid fa-triangle-exclamation"></i><span>Stock Crítico</span></span>`
           : `<span class="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold flex items-center space-x-1 justify-center"><i class="fa-solid fa-circle-check"></i><span>Normal</span></span>`;
@@ -1110,7 +1122,14 @@
     }
 
     function switchTab(tabId) {
-      const isCategoryFilter = ['tab-materias-primas', 'tab-muestras', 'tab-empaque'].includes(tabId);
+      if (tabId === 'tab-critico') {
+        activeCategory = 'CRITICO';
+      } else if (tabId === 'tab-inventory') {
+        activeCategory = 'TODOS';
+      }
+      renderProducts();
+
+      const isCategoryFilter = ['tab-critico', 'tab-materias-primas', 'tab-muestras', 'tab-empaque'].includes(tabId);
       
       if (tabId === 'tab-inventory' || isCategoryFilter) {
         document.getElementById('tab-inventory').classList.remove('hidden');
@@ -1127,7 +1146,7 @@
       const secEmpaque = document.getElementById('sec-empaque');
 
       if (secMP && secMuestras && secEmpaque) {
-        if (tabId === 'tab-inventory') {
+        if (tabId === 'tab-inventory' || tabId === 'tab-critico') {
           secMP.classList.remove('hidden');
           secMuestras.classList.remove('hidden');
           secEmpaque.classList.remove('hidden');
@@ -1146,15 +1165,23 @@
         }
       }
 
-      const btns = ['btn-inventory', 'btn-materias-primas', 'btn-muestras', 'btn-empaque', 'btn-ai', 'btn-audit'];
+      const btns = ['btn-critico', 'btn-inventory', 'btn-materias-primas', 'btn-muestras', 'btn-empaque', 'btn-ai', 'btn-audit'];
       btns.forEach(bId => {
         const b = document.getElementById(bId);
         if (!b) return;
         const targetTab = bId.replace('btn-', 'tab-');
         if (targetTab === tabId) {
-          b.className = "pb-3 border-b-2 border-aurani-magenta text-aurani-magenta flex items-center space-x-2 font-bold whitespace-nowrap";
+          if (bId === 'btn-critico') {
+            b.className = "pb-3 border-b-2 border-rose-600 text-rose-600 flex items-center space-x-2 font-bold whitespace-nowrap";
+          } else {
+            b.className = "pb-3 border-b-2 border-aurani-magenta text-aurani-magenta flex items-center space-x-2 font-bold whitespace-nowrap";
+          }
         } else {
-          b.className = "pb-3 border-b-2 border-transparent text-slate-500 hover:text-aurani-magenta flex items-center space-x-2 font-bold whitespace-nowrap";
+          if (bId === 'btn-critico') {
+            b.className = "pb-3 border-b-2 border-rose-600/30 text-rose-600 hover:text-rose-700 flex items-center space-x-2 font-bold whitespace-nowrap";
+          } else {
+            b.className = "pb-3 border-b-2 border-transparent text-slate-500 hover:text-aurani-magenta flex items-center space-x-2 font-bold whitespace-nowrap";
+          }
         }
       });
     }
