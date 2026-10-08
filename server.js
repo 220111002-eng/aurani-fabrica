@@ -624,11 +624,20 @@ app.get('/api/audit-logs', (req, res) => {
   });
 });
 
-// 7. Alertas Pendientes
+// 7. Alertas Pendientes (Sincronización dinámica en tiempo real de todos los productos en stock crítico)
 app.get('/api/alerts', (req, res) => {
-  db.all(`SELECT * FROM alerts ORDER BY created_at DESC`, (err, alerts) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(alerts);
+  db.all(`SELECT * FROM products WHERE stock_quantity <= min_stock`, (err, lowStockProds) => {
+    if (lowStockProds && lowStockProds.length > 0) {
+      lowStockProds.forEach(p => {
+        const msg = `¡ALERTA MÓVIL! Stock crítico en '${p.name}' (SKU: ${p.sku}). Disponibles: ${p.stock_quantity} (Mínimo: ${p.min_stock})`;
+        createAlert('STOCK_BAJO', msg);
+      });
+    }
+
+    db.all(`SELECT * FROM alerts ORDER BY id DESC`, (err2, alerts) => {
+      if (err2) return res.status(500).json({ error: err2.message });
+      res.json(alerts || []);
+    });
   });
 });
 
