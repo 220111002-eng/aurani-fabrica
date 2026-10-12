@@ -391,6 +391,29 @@
           <input type="text" id="add-prod-name" required placeholder="Ej: Bolsa Stand up / Caja Grande" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
         </div>
 
+        <!-- Campos Opcionales (Excel Aurani / Muestras / MP) -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-600">Proveedor <span class="text-[10px] text-slate-400 font-normal">(Opcional)</span></label>
+            <input type="text" id="add-prod-supplier" placeholder="Ej: Sodexim, WIN, DEIMAN" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-600">Caducidad <span class="text-[10px] text-slate-400 font-normal">(Opcional)</span></label>
+            <input type="text" id="add-prod-expiration" placeholder="Ej: 09/25, Dic 2026" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-600">Lote <span class="text-[10px] text-slate-400 font-normal">(Opcional)</span></label>
+            <input type="text" id="add-prod-batch" placeholder="Ej: AS-196875" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-600">Unidad de Medida <span class="text-[10px] text-slate-400 font-normal">(Opcional)</span></label>
+            <input type="text" id="add-prod-unit" placeholder="Ej: gramos, kg, pz, ml" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+          </div>
+        </div>
+
         <!-- Campos de Lotificación para Material de Empaque -->
         <div id="add-lotification-container" class="p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-2 hidden">
           <span class="text-xs font-bold text-amber-900 flex items-center space-x-1">
@@ -462,6 +485,29 @@
               <option value="Muestras">🎁 Muestras</option>
               <option value="General">⚙️ General / Otros</option>
             </select>
+          </div>
+        </div>
+
+        <!-- Campos Opcionales (Excel Aurani / Muestras / MP) -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-600">Proveedor <span class="text-[10px] text-slate-400 font-normal">(Opcional)</span></label>
+            <input type="text" id="edit-prod-supplier" placeholder="Ej: Sodexim, WIN, DEIMAN" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-600">Caducidad <span class="text-[10px] text-slate-400 font-normal">(Opcional)</span></label>
+            <input type="text" id="edit-prod-expiration" placeholder="Ej: 09/25, Dic 2026" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-600">Lote <span class="text-[10px] text-slate-400 font-normal">(Opcional)</span></label>
+            <input type="text" id="edit-prod-batch" placeholder="Ej: AS-196875" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-600">Unidad de Medida <span class="text-[10px] text-slate-400 font-normal">(Opcional)</span></label>
+            <input type="text" id="edit-prod-unit" placeholder="Ej: gramos, kg, pz, ml" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
           </div>
         </div>
 
@@ -739,10 +785,17 @@
           ? `<span class="px-2.5 py-1 rounded-full bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold flex items-center space-x-1 justify-center"><i class="fa-solid fa-triangle-exclamation"></i><span>Stock Crítico</span></span>`
           : `<span class="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold flex items-center space-x-1 justify-center"><i class="fa-solid fa-circle-check"></i><span>Normal</span></span>`;
 
+        const extraBadges = [];
+        if (p.unit_of_measure) extraBadges.push(`<span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-normal text-[10px]"><i class="fa-solid fa-weight-scale mr-0.5 text-slate-400"></i>${p.unit_of_measure}</span>`);
+        if (p.supplier_name) extraBadges.push(`<span class="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 font-semibold text-[10px] border border-blue-100"><i class="fa-solid fa-truck-field mr-0.5 text-blue-500"></i>${p.supplier_name}</span>`);
+        if (p.expiration_date) extraBadges.push(`<span class="px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 font-semibold text-[10px] border border-amber-200"><i class="fa-solid fa-calendar-xmark mr-0.5 text-amber-500"></i>Cad: ${p.expiration_date}</span>`);
+        if (p.batch_number) extraBadges.push(`<span class="px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 font-semibold text-[10px] border border-purple-100"><i class="fa-solid fa-barcode mr-0.5 text-purple-500"></i>Lote: ${p.batch_number}</span>`);
+        const badgesHtml = extraBadges.length > 0 ? `<div class="flex flex-wrap gap-1 mt-1">${extraBadges.join('')}</div>` : '';
+
         const rowHtml = `
           <tr class="hover:bg-pink-50/40 transition-colors text-xs">
             <td class="px-5 py-3 font-mono font-bold text-aurani-magenta">${p.sku}</td>
-            <td class="px-5 py-3 font-bold text-slate-800 text-sm">${p.name}</td>
+            <td class="px-5 py-3 font-bold text-slate-800 text-sm"><div>${p.name}</div>${badgesHtml}</td>
             <td class="px-5 py-3 font-bold"><span class="px-2.5 py-1 rounded-lg bg-pink-50 text-aurani-magenta border border-pink-100">${p.category || 'General'}</span></td>
             <td class="px-5 py-3 text-center font-extrabold text-base ${isCritical ? 'text-rose-600' : 'text-slate-800'}">${p.stock_quantity}</td>
             <td class="px-5 py-3 text-center text-slate-400 font-semibold">${p.min_stock}</td>
@@ -769,7 +822,7 @@
           const rowEmpaqueHtml = `
             <tr class="hover:bg-amber-50/40 transition-colors text-xs">
               <td class="px-4 py-3 font-mono font-bold text-amber-800">${p.sku}</td>
-              <td class="px-4 py-3 font-bold text-slate-800 text-sm">${p.name}</td>
+              <td class="px-4 py-3 font-bold text-slate-800 text-sm"><div>${p.name}</div>${badgesHtml}</td>
               <td class="px-4 py-3 text-center font-extrabold text-amber-900 bg-amber-50/50 text-sm">${unlotified}</td>
               <td class="px-4 py-3 text-center font-extrabold text-purple-900 bg-purple-50/50 text-sm">${lotified}</td>
               <td class="px-4 py-3 text-center font-extrabold text-base ${isCritical ? 'text-rose-600' : 'text-slate-800'}">${p.stock_quantity}</td>
@@ -1061,6 +1114,10 @@
         sku: sku,
         category: category || 'General',
         name: name,
+        supplier_name: document.getElementById('add-prod-supplier') ? document.getElementById('add-prod-supplier').value.trim() : '',
+        expiration_date: document.getElementById('add-prod-expiration') ? document.getElementById('add-prod-expiration').value.trim() : '',
+        batch_number: document.getElementById('add-prod-batch') ? document.getElementById('add-prod-batch').value.trim() : '',
+        unit_of_measure: document.getElementById('add-prod-unit') ? document.getElementById('add-prod-unit').value.trim() : '',
         stock_quantity: parseFloat(document.getElementById('add-prod-stock').value) || 0,
         unlotified_stock: parseFloat(document.getElementById('add-prod-unlotified').value) || 0,
         lotified_stock: parseFloat(document.getElementById('add-prod-lotified').value) || 0,
@@ -1099,6 +1156,18 @@
       if (document.getElementById('edit-prod-category')) {
         document.getElementById('edit-prod-category').value = cat;
       }
+      if (document.getElementById('edit-prod-supplier')) {
+        document.getElementById('edit-prod-supplier').value = prod.supplier_name || '';
+      }
+      if (document.getElementById('edit-prod-expiration')) {
+        document.getElementById('edit-prod-expiration').value = prod.expiration_date || '';
+      }
+      if (document.getElementById('edit-prod-batch')) {
+        document.getElementById('edit-prod-batch').value = prod.batch_number || '';
+      }
+      if (document.getElementById('edit-prod-unit')) {
+        document.getElementById('edit-prod-unit').value = prod.unit_of_measure || '';
+      }
       document.getElementById('edit-prod-unlotified').value = prod.unlotified_stock !== undefined && prod.unlotified_stock !== null ? prod.unlotified_stock : prod.stock_quantity;
       document.getElementById('edit-prod-lotified').value = prod.lotified_stock !== undefined && prod.lotified_stock !== null ? prod.lotified_stock : 0;
       document.getElementById('edit-prod-stock').value = prod.stock_quantity;
@@ -1118,6 +1187,10 @@
       const payload = {
         name: document.getElementById('edit-prod-name').value,
         category: document.getElementById('edit-prod-category') ? document.getElementById('edit-prod-category').value : 'General',
+        supplier_name: document.getElementById('edit-prod-supplier') ? document.getElementById('edit-prod-supplier').value.trim() : '',
+        expiration_date: document.getElementById('edit-prod-expiration') ? document.getElementById('edit-prod-expiration').value.trim() : '',
+        batch_number: document.getElementById('edit-prod-batch') ? document.getElementById('edit-prod-batch').value.trim() : '',
+        unit_of_measure: document.getElementById('edit-prod-unit') ? document.getElementById('edit-prod-unit').value.trim() : '',
         stock_quantity: parseFloat(document.getElementById('edit-prod-stock').value),
         unlotified_stock: parseFloat(document.getElementById('edit-prod-unlotified').value) || 0,
         lotified_stock: parseFloat(document.getElementById('edit-prod-lotified').value) || 0,
