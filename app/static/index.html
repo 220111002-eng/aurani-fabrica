@@ -504,6 +504,19 @@
           <input type="text" id="edit-user-name" value="Ing. Alejandra Alvarado Reyes (Administración)" placeholder="Ing. Alejandra Alvarado Reyes" required class="w-full px-3 py-2 bg-pink-50 border border-pink-200 rounded-xl text-sm font-semibold">
         </div>
 
+        <div class="flex justify-end space-x-3 pt-3">
+          <button type="button" onclick="closeEditModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-xs font-bold text-slate-600 cursor-pointer transition">
+            Cancelar
+          </button>
+          <button type="submit" class="px-5 py-2.5 bg-aurani-magenta hover:bg-pink-700 text-white rounded-xl text-xs font-bold shadow-md shadow-pink-500/20 flex items-center space-x-1.5 cursor-pointer transition">
+            <i class="fa-solid fa-check"></i>
+            <span>Editar Stock</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Modal Escáner Código de Barras / QR -->
   <div id="modal-barcode-scanner" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-pink-100 animate-in fade-in zoom-in duration-200">
