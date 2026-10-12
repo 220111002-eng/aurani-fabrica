@@ -240,10 +240,20 @@ function createAlert(alertType, message) {
 
 function checkProductLowStock(product) {
   if (product && product.stock_quantity !== undefined && product.min_stock !== undefined) {
-    if (product.stock_quantity <= product.min_stock) {
-      const msg = `¡ALERTA MÓVIL! Stock crítico en '${product.name}' (SKU: ${product.sku}). Disponibles: ${product.stock_quantity} (Mínimo: ${product.min_stock})`;
+    const stockQty = parseFloat(product.stock_quantity);
+    const minStock = parseFloat(product.min_stock);
+    if (stockQty <= minStock) {
+      const msg = `¡ALERTA MÓVIL! Stock crítico en '${product.name}' (SKU: ${product.sku}). Disponibles: ${stockQty} (Mínimo: ${minStock})`;
       createAlert('STOCK_BAJO', msg);
       logAudit('Product', product.id, 'ALERTA_STOCK_BAJO', msg, 'Motor de Inventario Node.js');
+    } else {
+      // Si el stock actual es mayor al mínimo, eliminar cualquier alerta de stock bajo para este insumo
+      db.run(`DELETE FROM alerts WHERE alert_type = 'STOCK_BAJO' AND (message LIKE ? OR message LIKE ?)`,
+        [`%${product.sku}%`, `%${product.name}%`],
+        (delErr) => {
+          if (!delErr) console.log(`✅ Alerta de stock crítico removida para ${product.name} (${product.sku}) - Stock actual: ${stockQty}`);
+        }
+      );
     }
   }
 }
@@ -547,7 +557,17 @@ const handleProductUpdate = (req, res) => {
         logAudit('Product', id, 'ACTUALIZAR', details, user);
 
         db.get(`SELECT * FROM products WHERE id = ?`, [id], (e, updatedProd) => {
-          checkProductLowStock(updatedProd);
+          if (updatedProd) {
+            checkProductLowStock(updatedProd);
+            if (parseFloat(updatedProd.stock_quantity) > parseFloat(updatedProd.min_stock)) {
+              db.run(`DELETE FROM alerts WHERE alert_type = 'STOCK_BAJO' AND (message LIKE ? OR message LIKE ?)`,
+                [`%${updatedProd.sku}%`, `%${updatedProd.name}%`],
+                (delErr) => {
+                  logAudit('Product', id, 'ALERTA_RESUELTA', `Alerta de stock crítico resuelta automáticamente al restablecer stock a ${updatedProd.stock_quantity}`, user);
+                }
+              );
+            }
+          }
           res.json(updatedProd);
         });
       }
@@ -626,17 +646,28 @@ app.get('/api/audit-logs', (req, res) => {
 
 // 7. Alertas Pendientes (Sincronización dinámica en tiempo real de todos los productos en stock crítico)
 app.get('/api/alerts', (req, res) => {
-  db.all(`SELECT * FROM products WHERE stock_quantity <= min_stock`, (err, lowStockProds) => {
-    if (lowStockProds && lowStockProds.length > 0) {
-      lowStockProds.forEach(p => {
-        const msg = `¡ALERTA MÓVIL! Stock crítico en '${p.name}' (SKU: ${p.sku}). Disponibles: ${p.stock_quantity} (Mínimo: ${p.min_stock})`;
-        createAlert('STOCK_BAJO', msg);
+  // 1. Limpiar alertas de stock bajo para productos que ya tienen stock suficiente (> min_stock)
+  db.all(`SELECT sku, name FROM products WHERE stock_quantity > min_stock`, (errProds, okProds) => {
+    if (okProds && okProds.length > 0) {
+      okProds.forEach(p => {
+        db.run(`DELETE FROM alerts WHERE alert_type = 'STOCK_BAJO' AND (message LIKE ? OR message LIKE ?)`, [`%${p.sku}%`, `%${p.name}%`]);
       });
     }
 
-    db.all(`SELECT * FROM alerts ORDER BY id DESC`, (err2, alerts) => {
-      if (err2) return res.status(500).json({ error: err2.message });
-      res.json(alerts || []);
+    // 2. Asegurar alertas para productos con stock crítico (<= min_stock)
+    db.all(`SELECT * FROM products WHERE stock_quantity <= min_stock`, (err, lowStockProds) => {
+      if (lowStockProds && lowStockProds.length > 0) {
+        lowStockProds.forEach(p => {
+          const msg = `¡ALERTA MÓVIL! Stock crítico en '${p.name}' (SKU: ${p.sku}). Disponibles: ${p.stock_quantity} (Mínimo: ${p.min_stock})`;
+          createAlert('STOCK_BAJO', msg);
+        });
+      }
+
+      // 3. Devolver lista de alertas activas
+      db.all(`SELECT * FROM alerts ORDER BY id DESC`, (err2, alerts) => {
+        if (err2) return res.status(500).json({ error: err2.message });
+        res.json(alerts || []);
+      });
     });
   });
 });
