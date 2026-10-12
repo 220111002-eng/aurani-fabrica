@@ -489,15 +489,19 @@ app.get('/api/users', (req, res) => {
 // --- ENDPOINTS API REST (Para App Android y Dashboard Web) ---
 
 // 1. Obtener lista de productos (Ideal para RecyclerView en Android)
-app.get('/api/products', (req, res) => {
+const handleGetProducts = (req, res) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
   db.all(`SELECT * FROM products ORDER BY id ASC`, (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
   });
-});
+};
+app.get('/api/products', handleGetProducts);
+app.get('/api/productos', handleGetProducts);
 
-// 2. Crear producto
-app.post('/api/products', (req, res) => {
+// 2. Crear producto (Soporta /api/products y /api/productos)
+const handleProductCreate = (req, res) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
   const { sku, name, category, stock_quantity, unlotified_stock, lotified_stock, min_stock, unit_price, supplier_id } = req.body;
   
   let unlotified = unlotified_stock !== undefined ? parseFloat(unlotified_stock) : 0;
@@ -520,7 +524,9 @@ app.post('/api/products', (req, res) => {
       });
     }
   );
-});
+};
+app.post('/api/products', handleProductCreate);
+app.post('/api/productos', handleProductCreate);
 
 // 3. Modificar producto / Editar stock (Soporta PUT, POST, /api/products/:id y /api/productos/:id)
 const handleProductUpdate = (req, res) => {

@@ -531,9 +531,13 @@
       </div>
     </div>
   </div>
-
   <script>
-    const API_BASE = (window.location.protocol === 'file:' || !window.location.host) ? 'http://localhost:8000' : '';
+    const isLocalOrFile = window.location.protocol === 'file:' || 
+                          window.location.protocol === 'content:' || 
+                          !window.location.host || 
+                          window.location.origin.includes('localhost') || 
+                          window.location.origin.includes('127.0.0.1');
+    const API_BASE = isLocalOrFile ? 'https://aurani-fabrica.onrender.com' : '';
     let currentProducts = [];
     let activeCategory = 'TODOS';
 
@@ -789,7 +793,7 @@
     }
 
     async function fetchProducts() {
-      const res = await fetch(API_BASE + '/api/products');
+      const res = await fetch(API_BASE + '/api/products?t=' + Date.now(), { cache: 'no-store' });
       const data = await res.json();
       currentProducts = data;
       document.getElementById('stat-products').innerText = data.length;
