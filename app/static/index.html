@@ -435,17 +435,17 @@
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label id="add-label-stock" class="block text-xs font-bold text-slate-600">Stock Total</label>
-            <input type="number" step="0.1" id="add-prod-stock" value="10" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold">
+            <input type="number" step="any" id="add-prod-stock" value="10" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold">
           </div>
           <div>
             <label id="add-label-min" class="block text-xs font-bold text-slate-600">Mínimo de Alerta (KG / PZ)</label>
-            <input type="number" step="0.1" id="add-prod-min" value="5" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+            <input type="number" step="any" id="add-prod-min" value="5" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
           </div>
         </div>
 
         <div>
           <label class="block text-xs font-bold text-slate-600">Precio Unitario ($ MXN)</label>
-          <input type="number" step="0.01" id="add-prod-price" value="0.00" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+          <input type="number" step="any" id="add-prod-price" value="0.00" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
         </div>
 
         <div>
@@ -532,17 +532,17 @@
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label id="edit-label-stock" class="block text-xs font-bold text-slate-600">Stock Total</label>
-            <input type="number" step="0.1" id="edit-prod-stock" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold">
+            <input type="number" step="any" id="edit-prod-stock" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold">
           </div>
           <div>
             <label id="edit-label-min" class="block text-xs font-bold text-slate-600">Mínimo de Alerta (KG / PZ)</label>
-            <input type="number" step="0.1" id="edit-prod-min" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+            <input type="number" step="any" id="edit-prod-min" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
           </div>
         </div>
 
         <div>
           <label class="block text-xs font-bold text-slate-600">Precio Unitario ($ MXN)</label>
-          <input type="number" step="0.01" id="edit-prod-price" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+          <input type="number" step="any" id="edit-prod-price" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
         </div>
 
         <div>
@@ -786,7 +786,7 @@
           : `<span class="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold flex items-center space-x-1 justify-center"><i class="fa-solid fa-circle-check"></i><span>Normal</span></span>`;
 
         const extraBadges = [];
-        if (p.unit_of_measure) extraBadges.push(`<span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-normal text-[10px]"><i class="fa-solid fa-weight-scale mr-0.5 text-slate-400"></i>${p.unit_of_measure}</span>`);
+        if (p.unit_of_measure) extraBadges.push(`<span class="px-2 py-0.5 rounded-full bg-pink-50 text-aurani-magenta font-bold text-[10px] border border-pink-200"><i class="fa-solid fa-scale-balanced mr-1 text-pink-600"></i>Unidad: ${p.unit_of_measure}</span>`);
         if (p.supplier_name) extraBadges.push(`<span class="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 font-semibold text-[10px] border border-blue-100"><i class="fa-solid fa-truck-field mr-0.5 text-blue-500"></i>${p.supplier_name}</span>`);
         if (p.expiration_date) extraBadges.push(`<span class="px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 font-semibold text-[10px] border border-amber-200"><i class="fa-solid fa-calendar-xmark mr-0.5 text-amber-500"></i>Cad: ${p.expiration_date}</span>`);
         if (p.batch_number) extraBadges.push(`<span class="px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 font-semibold text-[10px] border border-purple-100"><i class="fa-solid fa-barcode mr-0.5 text-purple-500"></i>Lote: ${p.batch_number}</span>`);
@@ -797,8 +797,12 @@
             <td class="px-5 py-3 font-mono font-bold text-aurani-magenta">${p.sku}</td>
             <td class="px-5 py-3 font-bold text-slate-800 text-sm"><div>${p.name}</div>${badgesHtml}</td>
             <td class="px-5 py-3 font-bold"><span class="px-2.5 py-1 rounded-lg bg-pink-50 text-aurani-magenta border border-pink-100">${p.category || 'General'}</span></td>
-            <td class="px-5 py-3 text-center font-extrabold text-base ${isCritical ? 'text-rose-600' : 'text-slate-800'}">${p.stock_quantity}</td>
-            <td class="px-5 py-3 text-center text-slate-400 font-semibold">${p.min_stock}</td>
+            <td class="px-5 py-3 text-center font-extrabold text-base ${isCritical ? 'text-rose-600' : 'text-slate-800'}">
+              ${p.stock_quantity}${p.unit_of_measure ? ` <span class="text-xs font-bold text-aurani-magenta bg-pink-100/70 px-1.5 py-0.5 rounded border border-pink-200">${p.unit_of_measure}</span>` : ''}
+            </td>
+            <td class="px-5 py-3 text-center text-slate-400 font-semibold">
+              ${p.min_stock}${p.unit_of_measure ? ` <span class="text-[11px] text-slate-500 font-medium">${p.unit_of_measure}</span>` : ''}
+            </td>
             <td class="px-5 py-3 text-right font-mono font-bold text-emerald-700 text-sm">$${p.unit_price.toLocaleString('es-MX', {minimumFractionDigits: 2})}</td>
             <td class="px-5 py-3 text-center">${statusBadge}</td>
             <td class="px-5 py-3 text-center space-x-1">
@@ -825,8 +829,12 @@
               <td class="px-4 py-3 font-bold text-slate-800 text-sm"><div>${p.name}</div>${badgesHtml}</td>
               <td class="px-4 py-3 text-center font-extrabold text-amber-900 bg-amber-50/50 text-sm">${unlotified}</td>
               <td class="px-4 py-3 text-center font-extrabold text-purple-900 bg-purple-50/50 text-sm">${lotified}</td>
-              <td class="px-4 py-3 text-center font-extrabold text-base ${isCritical ? 'text-rose-600' : 'text-slate-800'}">${p.stock_quantity}</td>
-              <td class="px-4 py-3 text-center text-slate-400 font-semibold">${p.min_stock}</td>
+              <td class="px-4 py-3 text-center font-extrabold text-base ${isCritical ? 'text-rose-600' : 'text-slate-800'}">
+                ${p.stock_quantity}${p.unit_of_measure ? ` <span class="text-xs font-bold text-amber-900 bg-amber-100/70 px-1.5 py-0.5 rounded border border-amber-300">${p.unit_of_measure}</span>` : ' <span class="text-[11px] text-slate-400">pz</span>'}
+              </td>
+              <td class="px-4 py-3 text-center text-slate-400 font-semibold">
+                ${p.min_stock}${p.unit_of_measure ? ` <span class="text-[11px] text-slate-500 font-medium">${p.unit_of_measure}</span>` : ' <span class="text-[11px] text-slate-400">pz</span>'}
+              </td>
               <td class="px-4 py-3 text-right font-mono font-bold text-emerald-700 text-sm">$${p.unit_price.toLocaleString('es-MX', {minimumFractionDigits: 2})}</td>
               <td class="px-4 py-3 text-center">${statusBadge}</td>
               <td class="px-4 py-3 text-center space-x-1">
@@ -1184,30 +1192,43 @@
     async function handleEditSubmit(e) {
       e.preventDefault();
       const id = document.getElementById('edit-prod-id').value;
+      const rawStock = document.getElementById('edit-prod-stock').value;
+      const rawMin = document.getElementById('edit-prod-min').value;
+      const rawPrice = document.getElementById('edit-prod-price').value;
+      const name = document.getElementById('edit-prod-name').value.trim();
+
       const payload = {
-        name: document.getElementById('edit-prod-name').value,
+        name: name,
         category: document.getElementById('edit-prod-category') ? document.getElementById('edit-prod-category').value : 'General',
         supplier_name: document.getElementById('edit-prod-supplier') ? document.getElementById('edit-prod-supplier').value.trim() : '',
         expiration_date: document.getElementById('edit-prod-expiration') ? document.getElementById('edit-prod-expiration').value.trim() : '',
         batch_number: document.getElementById('edit-prod-batch') ? document.getElementById('edit-prod-batch').value.trim() : '',
         unit_of_measure: document.getElementById('edit-prod-unit') ? document.getElementById('edit-prod-unit').value.trim() : '',
-        stock_quantity: parseFloat(document.getElementById('edit-prod-stock').value),
+        stock_quantity: parseFloat(rawStock) || 0,
         unlotified_stock: parseFloat(document.getElementById('edit-prod-unlotified').value) || 0,
         lotified_stock: parseFloat(document.getElementById('edit-prod-lotified').value) || 0,
-        min_stock: parseFloat(document.getElementById('edit-prod-min').value),
-        unit_price: parseFloat(document.getElementById('edit-prod-price').value),
-        user_name: document.getElementById('edit-user-name').value
+        min_stock: parseFloat(rawMin) || 0,
+        unit_price: parseFloat(rawPrice) || 0,
+        user_name: document.getElementById('edit-user-name').value.trim() || 'Ing. Alejandra Alvarado Reyes'
       };
 
-      const res = await fetch(API_BASE + `/api/products/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
+      try {
+        const res = await fetch(API_BASE + `/api/products/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
 
-      if (res.ok) {
-        closeEditModal();
-        await loadData();
+        if (res.ok) {
+          closeEditModal();
+          await loadData();
+          alert("¡Insumo y unidad de medida actualizados exitosamente!");
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          alert("Error al actualizar: " + (errData.error || "No se pudo actualizar el insumo en el servidor"));
+        }
+      } catch (err) {
+        alert("Error de conexión con el servidor: " + err.message);
       }
     }
 

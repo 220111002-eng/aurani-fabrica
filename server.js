@@ -582,7 +582,7 @@ const handleProductUpdate = (req, res) => {
       function(err) {
         if (err) return res.status(500).json({ error: err.message });
         
-        const details = `Categoría: ${prod.category} -> ${newCategory}, Stock: ${prod.stock_quantity} -> ${newStock}, Caducidad: ${newExp || '-'}, Proveedor: ${newSupp || '-'}, Precio: $${prod.unit_price} -> $${newPrice}`;
+        const details = `Categoría: ${prod.category} -> ${newCategory}, Stock: ${prod.stock_quantity} -> ${newStock}, Unidad: ${newUnit || '-'}, Caducidad: ${newExp || '-'}, Proveedor: ${newSupp || '-'}, Precio: $${prod.unit_price} -> $${newPrice}`;
         logAudit('Product', id, 'ACTUALIZAR', details, user);
 
         db.get(`SELECT * FROM products WHERE id = ?`, [id], (e, updatedProd) => {
