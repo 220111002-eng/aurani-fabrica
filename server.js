@@ -191,6 +191,22 @@ db.serialize(() => {
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
 
+  db.run(`CREATE TABLE IF NOT EXISTS odoo_receptions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    odoo_order_id INTEGER,
+    odoo_order_name TEXT,
+    odoo_line_id INTEGER,
+    partner_name TEXT,
+    product_name TEXT,
+    quantity REAL,
+    unit_of_measure TEXT,
+    unit_price REAL,
+    batch_number TEXT DEFAULT '',
+    expiration_date TEXT DEFAULT '',
+    received_by TEXT DEFAULT 'Almacén',
+    received_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+
   // Sembrar datos iniciales si está vacía
   db.get("SELECT COUNT(*) as count FROM products", (err, row) => {
     if (row && row.count === 0) seedDatabase();
@@ -705,6 +721,331 @@ app.post('/api/alerts/:id/read', (req, res) => {
   db.run(`UPDATE alerts SET status = 'ATENDIDA' WHERE id = ?`, [req.params.id], (err) => {
     res.json({ status: 'ok' });
   });
+});
+
+// ==============================================================================
+// --- MÓDULO DE INTEGRACIÓN NATIVO CON ODOO 19 ENTERPRISE (JSON-RPC) ---
+// ==============================================================================
+
+const ODOO_CONFIG = {
+  url: process.env.ODOO_URL || 'https://grupo-aurani-sa-de-cv.odoo.com/jsonrpc',
+  db: process.env.ODOO_DB || 'grupo-aurani-sa-de-cv',
+  username: process.env.ODOO_USER || 'alealvaradoreyes1012z@gmail.com',
+  apiKey: process.env.ODOO_API_KEY || '82a0a4399470b561942003276ee4fea3a906debb'
+};
+
+let cachedOdooUid = 48;
+
+async function callOdooRpc(service, method, args) {
+  const payload = {
+    jsonrpc: '2.0',
+    method: 'call',
+    params: { service, method, args },
+    id: Date.now()
+  };
+  const response = await fetch(ODOO_CONFIG.url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const data = await response.json();
+  if (data.error) {
+    const errMsg = data.error.data?.message || data.error.message || 'Error en comunicación con Odoo';
+    throw new Error(errMsg);
+  }
+  return data.result;
+}
+
+async function getOdooUid() {
+  if (cachedOdooUid) return cachedOdooUid;
+  const uid = await callOdooRpc('common', 'authenticate', [
+    ODOO_CONFIG.db,
+    ODOO_CONFIG.username,
+    ODOO_CONFIG.apiKey,
+    {}
+  ]);
+  if (!uid) throw new Error('Credenciales inválidas de Odoo');
+  cachedOdooUid = uid;
+  return uid;
+}
+
+async function executeOdoo(model, method, args, kwargs = {}) {
+  const uid = await getOdooUid();
+  try {
+    return await callOdooRpc('object', 'execute_kw', [
+      ODOO_CONFIG.db,
+      uid,
+      ODOO_CONFIG.apiKey,
+      model,
+      method,
+      args,
+      kwargs
+    ]);
+  } catch (err) {
+    if (err.message && (err.message.includes('Session expired') || err.message.includes('Access Denied'))) {
+      cachedOdooUid = null;
+      const newUid = await getOdooUid();
+      return await callOdooRpc('object', 'execute_kw', [
+        ODOO_CONFIG.db,
+        newUid,
+        ODOO_CONFIG.apiKey,
+        model,
+        method,
+        args,
+        kwargs
+      ]);
+    }
+    throw err;
+  }
+}
+
+// 1. Estatus y verificación de conexión con Odoo
+app.get('/api/odoo/status', async (req, res) => {
+  try {
+    const version = await callOdooRpc('common', 'version', []);
+    const uid = await getOdooUid();
+    res.json({
+      status: 'ok',
+      connected: true,
+      database: ODOO_CONFIG.db,
+      user: ODOO_CONFIG.username,
+      uid: uid,
+      server_version: version.server_version || 'Odoo Enterprise'
+    });
+  } catch (err) {
+    res.status(500).json({ status: 'error', connected: false, error: err.message });
+  }
+});
+
+// 2. Consultar Órdenes de Compra desde Odoo con partidas y estatus de recepción local
+app.get('/api/odoo/purchase-orders', async (req, res) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  try {
+    // Consultar las últimas órdenes de compra
+    const orders = await executeOdoo('purchase.order', 'search_read', [[]], {
+      fields: ['name', 'partner_id', 'date_order', 'amount_total', 'amount_untaxed', 'state', 'order_line'],
+      order: 'id desc',
+      limit: 20
+    });
+
+    if (!orders || orders.length === 0) {
+      return res.json({ status: 'ok', orders: [] });
+    }
+
+    // Consultar líneas de detalle
+    const lineIds = orders.flatMap(o => o.order_line || []);
+    let lines = [];
+    if (lineIds.length > 0) {
+      lines = await executeOdoo('purchase.order.line', 'read', [lineIds], {
+        fields: ['order_id', 'name', 'product_id', 'product_qty', 'product_uom_id', 'price_unit', 'price_subtotal', 'qty_received']
+      });
+    }
+
+    // Consultar recepciones locales ya confirmadas en fábrica
+    db.all(`SELECT odoo_order_id, odoo_line_id, SUM(quantity) as total_received FROM odoo_receptions GROUP BY odoo_order_id, odoo_line_id`, (dbErr, receptions) => {
+      const recMap = {};
+      if (receptions) {
+        receptions.forEach(r => {
+          recMap[`${r.odoo_order_id}_${r.odoo_line_id}`] = r.total_received;
+        });
+      }
+
+      const lineMap = {};
+      lines.forEach(l => {
+        const oId = Array.isArray(l.order_id) ? l.order_id[0] : l.order_id;
+        if (!lineMap[oId]) lineMap[oId] = [];
+
+        const qtyRec = recMap[`${oId}_${l.id}`] || 0;
+        const uomName = Array.isArray(l.product_uom_id) ? l.product_uom_id[1] : (l.product_uom_id || 'pz');
+        const prodName = Array.isArray(l.product_id) ? l.product_id[1] : (l.name || 'Insumo');
+
+        lineMap[oId].push({
+          id: l.id,
+          name: l.name || prodName,
+          product_name: prodName,
+          product_qty: l.product_qty || 0,
+          product_uom: uomName,
+          price_unit: l.price_unit || 0,
+          price_subtotal: l.price_subtotal || 0,
+          factory_received_qty: qtyRec,
+          is_received: qtyRec >= (l.product_qty || 0)
+        });
+      });
+
+      const formattedOrders = orders.map(o => {
+        const partnerName = Array.isArray(o.partner_id) ? o.partner_id[1] : (o.partner_id || 'Proveedor');
+        const oLines = lineMap[o.id] || [];
+        const allReceived = oLines.length > 0 && oLines.every(l => l.is_received);
+
+        return {
+          id: o.id,
+          name: o.name,
+          partner_name: partnerName,
+          date_order: o.date_order,
+          amount_total: o.amount_total,
+          amount_untaxed: o.amount_untaxed,
+          odoo_state: o.state,
+          all_received: allReceived,
+          lines: oLines
+        };
+      });
+
+      res.json({ status: 'ok', orders: formattedOrders });
+    });
+  } catch (err) {
+    console.error('Error al consultar Odoo purchase orders:', err);
+    res.status(500).json({ status: 'error', error: err.message });
+  }
+});
+
+// 3. Confirmar Recepción de Mercancía en Almacén (Opción B: Sumar stock real, lote y caducidad)
+app.post('/api/odoo/receive', (req, res) => {
+  const {
+    odoo_order_id,
+    odoo_order_name,
+    odoo_line_id,
+    partner_name,
+    product_name,
+    quantity,
+    unit_of_measure,
+    unit_price,
+    batch_number,
+    expiration_date,
+    user_name
+  } = req.body;
+
+  const qty = parseFloat(quantity);
+  if (isNaN(qty) || qty <= 0) {
+    return res.status(400).json({ error: 'La cantidad a recibir debe ser un número mayor a 0' });
+  }
+
+  const cleanName = (product_name || 'Insumo Odoo').trim();
+  const cleanPartner = (partner_name || '').trim();
+  const cleanUnit = (unit_of_measure || '').trim();
+  const cleanBatch = (batch_number || '').trim();
+  const cleanExp = (expiration_date || '').trim();
+  const user = (user_name || 'Operador Almacén').trim();
+  const price = parseFloat(unit_price) || 0.0;
+
+  // 1. Buscar si el insumo ya existe en el inventario local
+  db.get(`SELECT * FROM products WHERE LOWER(TRIM(name)) = LOWER(?) OR LOWER(TRIM(name)) LIKE ? LIMIT 1`,
+    [cleanName, `%${cleanName.toLowerCase()}%`],
+    (findErr, existingProd) => {
+      if (findErr) return res.status(500).json({ error: findErr.message });
+
+      if (existingProd) {
+        // Producto existente: sumar stock y actualizar lote/caducidad/proveedor
+        const newStock = existingProd.stock_quantity + qty;
+        const newUnlot = (existingProd.unlotified_stock || 0) + qty;
+        const finalUnit = cleanUnit || existingProd.unit_of_measure || '';
+        const finalSupp = cleanPartner || existingProd.supplier_name || '';
+        const finalBatch = cleanBatch || existingProd.batch_number || '';
+        const finalExp = cleanExp || existingProd.expiration_date || '';
+        const finalPrice = price > 0 ? price : existingProd.unit_price;
+
+        db.run(`UPDATE products SET stock_quantity = ?, unlotified_stock = ?, unit_of_measure = ?, supplier_name = ?, batch_number = ?, expiration_date = ?, unit_price = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+          [newStock, newUnlot, finalUnit, finalSupp, finalBatch, finalExp, finalPrice, existingProd.id],
+          (updateErr) => {
+            if (updateErr) return res.status(500).json({ error: updateErr.message });
+
+            // Registrar en recepciones de Odoo
+            db.run(`INSERT INTO odoo_receptions (odoo_order_id, odoo_order_name, odoo_line_id, partner_name, product_name, quantity, unit_of_measure, unit_price, batch_number, expiration_date, received_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              [odoo_order_id || null, odoo_order_name || '', odoo_line_id || null, finalSupp, cleanName, qty, finalUnit, finalPrice, finalBatch, finalExp, user],
+              () => {}
+            );
+
+            // Resolver alertas de stock crítico si el stock supera el mínimo
+            if (newStock > existingProd.min_stock) {
+              db.run(`DELETE FROM alerts WHERE alert_type = 'STOCK_BAJO' AND (message LIKE ? OR message LIKE ?)`,
+                [`%${existingProd.sku}%`, `%${existingProd.name}%`],
+                () => {}
+              );
+            }
+
+            const auditDetails = `Recepción Almacén desde Odoo (${odoo_order_name || 'OC'}): +${qty} ${finalUnit} de '${cleanName}'. Stock anterior: ${existingProd.stock_quantity} -> Nuevo: ${newStock}. Prov: ${finalSupp}, Lote: ${finalBatch || '-'}, Cad: ${finalExp || '-'}`;
+            logAudit('Product', existingProd.id, 'RECEPCION_ODOO', auditDetails, user);
+
+            db.get(`SELECT * FROM products WHERE id = ?`, [existingProd.id], (e, updatedRow) => {
+              res.json({
+                status: 'ok',
+                message: `¡${qty} ${finalUnit} de '${cleanName}' recibidos e ingresados al inventario exitosamente!`,
+                product: updatedRow
+              });
+            });
+          }
+        );
+      } else {
+        // Producto no existe: crearlo automáticamente
+        const skuPrefix = cleanName.toLowerCase().includes('caja') || cleanName.toLowerCase().includes('bolsa') || cleanName.toLowerCase().includes('empaque') ? 'EMP' : 'MP';
+        const newSku = `${skuPrefix}-OD-${Date.now().toString().slice(-4)}`;
+        const category = skuPrefix === 'EMP' ? 'Material de Empaque y Embalaje' : 'Materias Primas';
+
+        db.run(`INSERT INTO products (sku, name, category, stock_quantity, unlotified_stock, lotified_stock, min_stock, unit_price, expiration_date, supplier_name, batch_number, unit_of_measure) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [newSku, cleanName, category, qty, qty, 0, 10.0, price, cleanExp, cleanPartner, cleanBatch, cleanUnit],
+          function(insertErr) {
+            if (insertErr) return res.status(500).json({ error: insertErr.message });
+            const newId = this.lastID;
+
+            db.run(`INSERT INTO odoo_receptions (odoo_order_id, odoo_order_name, odoo_line_id, partner_name, product_name, quantity, unit_of_measure, unit_price, batch_number, expiration_date, received_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              [odoo_order_id || null, odoo_order_name || '', odoo_line_id || null, cleanPartner, cleanName, qty, cleanUnit, price, cleanBatch, cleanExp, user],
+              () => {}
+            );
+
+            const auditDetails = `Alta y Recepción desde Odoo (${odoo_order_name || 'OC'}): Creado nuevo producto '${cleanName}' con ${qty} ${cleanUnit}. Prov: ${cleanPartner}, Lote: ${cleanBatch || '-'}, Cad: ${cleanExp || '-'}`;
+            logAudit('Product', newId, 'ALTA_ODOO', auditDetails, user);
+
+            db.get(`SELECT * FROM products WHERE id = ?`, [newId], (e, newRow) => {
+              res.status(201).json({
+                status: 'ok',
+                message: `¡Nuevo insumo '${cleanName}' registrado y recibido desde Odoo con ${qty} ${cleanUnit}!`,
+                product: newRow
+              });
+            });
+          }
+        );
+      }
+    }
+  );
+});
+
+// 4. Consultar historial de recepciones locales de Odoo
+app.get('/api/odoo/receptions', (req, res) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  db.all(`SELECT * FROM odoo_receptions ORDER BY id DESC LIMIT 50`, (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows || []);
+  });
+});
+
+// 5. Consultar Facturas de Proveedor desde Odoo (account.move)
+app.get('/api/odoo/invoices', async (req, res) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  try {
+    const invoices = await executeOdoo('account.move', 'search_read', [
+      [['move_type', '=', 'in_invoice']]
+    ], {
+      fields: ['name', 'ref', 'partner_id', 'invoice_date', 'amount_total', 'amount_untaxed', 'state', 'payment_state'],
+      order: 'id desc',
+      limit: 25
+    });
+
+    const formattedInvoices = (invoices || []).map(inv => ({
+      id: inv.id,
+      name: inv.name,
+      ref: inv.ref || '',
+      partner_name: Array.isArray(inv.partner_id) ? inv.partner_id[1] : (inv.partner_id || 'Proveedor'),
+      invoice_date: inv.invoice_date,
+      amount_total: inv.amount_total,
+      amount_untaxed: inv.amount_untaxed,
+      state: inv.state,
+      payment_state: inv.payment_state
+    }));
+
+    res.json({ status: 'ok', invoices: formattedInvoices });
+  } catch (err) {
+    console.error('Error al consultar facturas de Odoo:', err);
+    res.status(500).json({ status: 'error', error: err.message });
+  }
 });
 
 // Endpoint para descargar la base de datos SQLite en vivo
