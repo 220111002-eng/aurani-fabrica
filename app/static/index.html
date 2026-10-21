@@ -382,67 +382,148 @@
         </div>
       </div>
 
-      <!-- Tabla de Órdenes de Compra -->
-      <div class="space-y-3">
-        <div class="flex justify-between items-center">
-          <h3 class="text-base font-bold text-slate-800 flex items-center space-x-2">
-            <i class="fa-solid fa-truck-ramp-box text-purple-700"></i>
-            <span>Órdenes de Compra Recientes de Odoo (Materias Primas y Empaque)</span>
-          </h3>
-          <span class="text-xs text-slate-500 font-medium">Opción B: Presiona "Recibir en Almacén" al descargar el insumo físico</span>
+      <!-- Sub-navegación dentro de Odoo: Órdenes de Compra vs Facturas -->
+      <div class="flex space-x-3 border-b border-purple-200 pb-2">
+        <button type="button" onclick="switchOdooSubTab('orders')" id="subbtn-odoo-orders" class="px-4 py-2 rounded-xl text-xs font-bold bg-purple-900 text-white shadow-md flex items-center space-x-2 cursor-pointer transition">
+          <i class="fa-solid fa-boxes-packing"></i>
+          <span>Órdenes de Compra y Recepción</span>
+          <span id="badge-odoo-sub-orders" class="px-2 py-0.5 rounded-full bg-purple-700 text-white text-[10px] ml-1">0</span>
+        </button>
+        <button type="button" onclick="switchOdooSubTab('invoices')" id="subbtn-odoo-invoices" class="px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-purple-100 hover:text-purple-900 flex items-center space-x-2 cursor-pointer transition">
+          <i class="fa-solid fa-file-invoice-dollar text-purple-600"></i>
+          <span>Facturas de Proveedores</span>
+          <span id="badge-odoo-sub-invoices" class="px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 text-[10px] ml-1">0</span>
+        </button>
+      </div>
+
+      <!-- VISTA SUB-PESTAÑA 1: ÓRDENES Y RECEPCIÓN FÍSICA -->
+      <div id="odoo-subtab-orders" class="space-y-6">
+        <!-- Tabla de Órdenes de Compra -->
+        <div class="space-y-3">
+          <div class="flex justify-between items-center">
+            <h3 class="text-base font-bold text-slate-800 flex items-center space-x-2">
+              <i class="fa-solid fa-truck-ramp-box text-purple-700"></i>
+              <span>Órdenes de Compra Recientes de Odoo (Materias Primas y Empaque)</span>
+            </h3>
+            <span class="text-xs text-slate-500 font-medium">Presiona "Recibir en Almacén" al descargar el insumo físico</span>
+          </div>
+
+          <div class="card-aurani overflow-hidden shadow-sm border-purple-100">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm text-slate-700">
+                <thead class="bg-purple-50/70 text-xs uppercase tracking-wider text-purple-900 border-b border-purple-100 font-bold">
+                  <tr>
+                    <th class="px-4 py-3">Folio Odoo</th>
+                    <th class="px-4 py-3">Fecha</th>
+                    <th class="px-4 py-3">Proveedor</th>
+                    <th class="px-4 py-3">Partida / Insumo</th>
+                    <th class="px-4 py-3 text-center">Cantidad Pedida</th>
+                    <th class="px-4 py-3 text-right">Precio Unitario</th>
+                    <th class="px-4 py-3 text-center">Estatus Odoo</th>
+                    <th class="px-4 py-3 text-center">Recepción en Fábrica</th>
+                  </tr>
+                </thead>
+                <tbody id="odoo-orders-table-body" class="divide-y divide-purple-50 text-xs">
+                  <tr>
+                    <td colspan="8" class="text-center py-8 text-slate-400">
+                      <i class="fa-solid fa-spinner fa-spin text-lg text-purple-600 mb-2"></i>
+                      <div>Cargando órdenes de compra desde Odoo...</div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
 
+        <!-- Tabla Historial de Recepciones en Fábrica -->
+        <div class="space-y-3 pt-6 border-t border-purple-100">
+          <h3 class="text-base font-bold text-slate-800 flex items-center space-x-2">
+            <i class="fa-solid fa-clipboard-check text-emerald-600"></i>
+            <span>Historial de Mercancía Recibida e Ingresada al Inventario</span>
+          </h3>
+          <div class="card-aurani overflow-hidden shadow-sm border-emerald-100">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm text-slate-700">
+                <thead class="bg-emerald-50/70 text-xs uppercase tracking-wider text-emerald-900 border-b border-emerald-100 font-bold">
+                  <tr>
+                    <th class="px-4 py-3">Fecha / Hora</th>
+                    <th class="px-4 py-3">Folio Odoo</th>
+                    <th class="px-4 py-3">Insumo Recibido</th>
+                    <th class="px-4 py-3">Proveedor</th>
+                    <th class="px-4 py-3 text-center">Cantidad Ingresada</th>
+                    <th class="px-4 py-3 text-center">Lote</th>
+                    <th class="px-4 py-3 text-center">Caducidad</th>
+                    <th class="px-4 py-3 text-center">Recibido Por</th>
+                  </tr>
+                </thead>
+                <tbody id="odoo-receptions-table-body" class="divide-y divide-emerald-50 text-xs">
+                  <!-- JS Render -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VISTA SUB-PESTAÑA 2: FACTURAS DE PROVEEDORES -->
+      <div id="odoo-subtab-invoices" class="space-y-4 hidden">
+        <!-- Tarjetas Resumen de Facturas -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="card-aurani p-4 border-purple-100 bg-white">
+            <div class="text-xs font-bold text-slate-500 uppercase">Total Facturas Registradas</div>
+            <div class="text-2xl font-black text-purple-950 mt-1" id="stat-inv-total-count">0</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">Sincronizadas con Odoo 19 Enterprise</div>
+          </div>
+          <div class="card-aurani p-4 border-emerald-100 bg-white">
+            <div class="text-xs font-bold text-emerald-700 uppercase">Monto Total Facturado</div>
+            <div class="text-2xl font-black text-emerald-800 mt-1" id="stat-inv-total-amount">$0.00</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">Moneda nacional (MXN)</div>
+          </div>
+          <div class="card-aurani p-4 border-amber-100 bg-white">
+            <div class="text-xs font-bold text-amber-700 uppercase">Estatus de Pago</div>
+            <div class="flex items-center space-x-2 mt-2">
+              <span id="stat-inv-paid" class="px-2.5 py-1 bg-emerald-100 text-emerald-800 font-extrabold text-xs rounded-lg">0 Pagadas</span>
+              <span id="stat-inv-pending" class="px-2.5 py-1 bg-amber-100 text-amber-800 font-extrabold text-xs rounded-lg">0 Pendientes</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Buscador de Facturas -->
+        <div class="card-aurani p-3 bg-white flex flex-col sm:flex-row items-center justify-between gap-3 border-purple-100">
+          <div class="relative flex-1 w-full">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-purple-400 text-xs"></i>
+            <input type="text" id="odoo-invoice-search" oninput="filterOdooInvoices(this.value)" placeholder="Buscar factura por folio (ej: FACTU/2022...), proveedor o estado..." class="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-purple-100 rounded-xl text-xs font-medium focus:outline-none focus:border-purple-600">
+          </div>
+          <button type="button" onclick="exportInvoicesCSV()" class="px-3.5 py-1.5 bg-purple-900 hover:bg-purple-800 text-white rounded-xl text-xs font-bold flex items-center space-x-1.5 whitespace-nowrap shadow-sm cursor-pointer transition">
+            <i class="fa-solid fa-file-csv"></i>
+            <span>Exportar Facturas (CSV)</span>
+          </button>
+        </div>
+
+        <!-- Tabla de Facturas -->
         <div class="card-aurani overflow-hidden shadow-sm border-purple-100">
           <div class="overflow-x-auto">
             <table class="w-full text-left text-sm text-slate-700">
               <thead class="bg-purple-50/70 text-xs uppercase tracking-wider text-purple-900 border-b border-purple-100 font-bold">
                 <tr>
-                  <th class="px-4 py-3">Folio Odoo</th>
+                  <th class="px-4 py-3">Folio Factura</th>
+                  <th class="px-4 py-3">Referencia</th>
                   <th class="px-4 py-3">Fecha</th>
                   <th class="px-4 py-3">Proveedor</th>
-                  <th class="px-4 py-3">Partida / Insumo</th>
-                  <th class="px-4 py-3 text-center">Cantidad Pedida</th>
-                  <th class="px-4 py-3 text-right">Precio Unitario</th>
-                  <th class="px-4 py-3 text-center">Estatus Odoo</th>
-                  <th class="px-4 py-3 text-center">Recepción en Fábrica</th>
+                  <th class="px-4 py-3 text-right">Subtotal</th>
+                  <th class="px-4 py-3 text-right">Total ($ MXN)</th>
+                  <th class="px-4 py-3 text-center">Estatus Contable</th>
+                  <th class="px-4 py-3 text-center">Estado de Pago</th>
                 </tr>
               </thead>
-              <tbody id="odoo-orders-table-body" class="divide-y divide-purple-50 text-xs">
+              <tbody id="odoo-invoices-table-body" class="divide-y divide-purple-50 text-xs">
                 <tr>
-                  <td colspan="8" class="text-center py-8 text-slate-400">
+                  <td colspan="8" class="text-center py-8 text-slate-400 font-medium">
                     <i class="fa-solid fa-spinner fa-spin text-lg text-purple-600 mb-2"></i>
-                    <div>Cargando órdenes de compra desde Odoo...</div>
+                    <div>Cargando facturas de Odoo...</div>
                   </td>
                 </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- Tabla Historial de Recepciones en Fábrica -->
-      <div class="space-y-3 pt-6 border-t border-purple-100">
-        <h3 class="text-base font-bold text-slate-800 flex items-center space-x-2">
-          <i class="fa-solid fa-clipboard-check text-emerald-600"></i>
-          <span>Historial de Mercancía Recibida e Ingresada al Inventario</span>
-        </h3>
-        <div class="card-aurani overflow-hidden shadow-sm border-emerald-100">
-          <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm text-slate-700">
-              <thead class="bg-emerald-50/70 text-xs uppercase tracking-wider text-emerald-900 border-b border-emerald-100 font-bold">
-                <tr>
-                  <th class="px-4 py-3">Fecha / Hora</th>
-                  <th class="px-4 py-3">Folio Odoo</th>
-                  <th class="px-4 py-3">Insumo Recibido</th>
-                  <th class="px-4 py-3">Proveedor</th>
-                  <th class="px-4 py-3 text-center">Cantidad Ingresada</th>
-                  <th class="px-4 py-3 text-center">Lote</th>
-                  <th class="px-4 py-3 text-center">Caducidad</th>
-                  <th class="px-4 py-3 text-center">Recibido Por</th>
-                </tr>
-              </thead>
-              <tbody id="odoo-receptions-table-body" class="divide-y divide-emerald-50 text-xs">
-                <!-- JS Render -->
               </tbody>
             </table>
           </div>
@@ -1476,6 +1557,7 @@
     // --- FUNCIONES MÓDULO ODOO 19 ENTERPRISE ---
     let odooOrders = [];
     let odooReceptions = [];
+    let odooInvoices = [];
 
     async function fetchOdooData() {
       const btnSync = document.getElementById('btn-sync-odoo');
@@ -1483,12 +1565,14 @@
         btnSync.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-purple-700"></i><span>Sincronizando...</span>`;
       }
       try {
-        const [ordersRes, recRes] = await Promise.all([
+        const [ordersRes, recRes, invRes] = await Promise.all([
           fetch(API_BASE + '/api/odoo/purchase-orders'),
-          fetch(API_BASE + '/api/odoo/receptions')
+          fetch(API_BASE + '/api/odoo/receptions'),
+          fetch(API_BASE + '/api/odoo/invoices')
         ]);
         const ordersData = await ordersRes.json();
         const recData = await recRes.json();
+        const invData = await invRes.json();
 
         if (ordersData.status === 'ok') {
           odooOrders = ordersData.orders || [];
@@ -1497,6 +1581,10 @@
         if (Array.isArray(recData)) {
           odooReceptions = recData;
           renderOdooReceptions();
+        }
+        if (invData.status === 'ok') {
+          odooInvoices = invData.invoices || [];
+          renderOdooInvoices();
         }
       } catch (err) {
         console.error('Error al sincronizar Odoo:', err);
@@ -1569,6 +1657,11 @@
       });
 
       tbody.innerHTML = html;
+
+      const subBadgeOrders = document.getElementById('badge-odoo-sub-orders');
+      if (subBadgeOrders) {
+        subBadgeOrders.innerText = odooOrders.length;
+      }
 
       const badgeOdoo = document.getElementById('tab-badge-odoo');
       if (badgeOdoo) {
@@ -1664,6 +1757,145 @@
         btn.disabled = false;
         btn.innerHTML = `<i class="fa-solid fa-check"></i><span>Confirmar Ingreso a Almacén</span>`;
       }
+    }
+
+    function switchOdooSubTab(tab) {
+      const ordersSec = document.getElementById('odoo-subtab-orders');
+      const invoicesSec = document.getElementById('odoo-subtab-invoices');
+      const btnOrders = document.getElementById('subbtn-odoo-orders');
+      const btnInvoices = document.getElementById('subbtn-odoo-invoices');
+
+      if (tab === 'orders') {
+        if (ordersSec) ordersSec.classList.remove('hidden');
+        if (invoicesSec) invoicesSec.classList.add('hidden');
+        if (btnOrders) {
+          btnOrders.className = "px-4 py-2 rounded-xl text-xs font-bold bg-purple-900 text-white shadow-md flex items-center space-x-2 cursor-pointer transition";
+        }
+        if (btnInvoices) {
+          btnInvoices.className = "px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-purple-100 hover:text-purple-900 flex items-center space-x-2 cursor-pointer transition";
+        }
+      } else if (tab === 'invoices') {
+        if (ordersSec) ordersSec.classList.add('hidden');
+        if (invoicesSec) invoicesSec.classList.remove('hidden');
+        if (btnOrders) {
+          btnOrders.className = "px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-purple-100 hover:text-purple-900 flex items-center space-x-2 cursor-pointer transition";
+        }
+        if (btnInvoices) {
+          btnInvoices.className = "px-4 py-2 rounded-xl text-xs font-bold bg-purple-900 text-white shadow-md flex items-center space-x-2 cursor-pointer transition";
+        }
+      }
+    }
+
+    function renderOdooInvoices(filterText = '') {
+      const tbody = document.getElementById('odoo-invoices-table-body');
+      if (!tbody) return;
+
+      const subBadgeInv = document.getElementById('badge-odoo-sub-invoices');
+      if (subBadgeInv) subBadgeInv.innerText = odooInvoices.length;
+
+      const statCount = document.getElementById('stat-inv-total-count');
+      const statAmount = document.getElementById('stat-inv-total-amount');
+      const statPaid = document.getElementById('stat-inv-paid');
+      const statPending = document.getElementById('stat-inv-pending');
+
+      let totalAmount = 0;
+      let countPaid = 0;
+      let countPending = 0;
+
+      odooInvoices.forEach(inv => {
+        totalAmount += (inv.amount_total || 0);
+        if (['paid', 'in_payment'].includes(inv.payment_state)) {
+          countPaid++;
+        } else {
+          countPending++;
+        }
+      });
+
+      if (statCount) statCount.innerText = odooInvoices.length;
+      if (statAmount) statAmount.innerText = '$' + totalAmount.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      if (statPaid) statPaid.innerText = `${countPaid} Pagadas / En Pago`;
+      if (statPending) statPending.innerText = `${countPending} Pendientes`;
+
+      let list = odooInvoices;
+      const q = (filterText || '').toLowerCase().trim();
+      if (q) {
+        list = list.filter(inv => 
+          (inv.name || '').toLowerCase().includes(q) ||
+          (inv.ref || '').toLowerCase().includes(q) ||
+          (inv.partner_name || '').toLowerCase().includes(q) ||
+          (inv.state || '').toLowerCase().includes(q) ||
+          (inv.payment_state || '').toLowerCase().includes(q)
+        );
+      }
+
+      if (!list || list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-slate-400 font-bold">No se encontraron facturas con el criterio indicado.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = list.map(inv => {
+        const stateLabels = {
+          'posted': '<span class="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 font-bold text-[10px]">Publicada</span>',
+          'draft': '<span class="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 font-bold text-[10px]">Borrador</span>',
+          'cancel': '<span class="px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 font-bold text-[10px]">Cancelada</span>'
+        };
+        const badgeState = stateLabels[inv.state] || `<span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-bold text-[10px]">${inv.state || '-'}</span>`;
+
+        let badgePay = '<span class="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 font-bold text-[10px]">-</span>';
+        if (inv.payment_state === 'in_payment' || inv.payment_state === 'paid') {
+          badgePay = '<span class="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px] flex items-center justify-center space-x-1"><i class="fa-solid fa-circle-check"></i><span>Pagada</span></span>';
+        } else if (inv.payment_state === 'not_paid') {
+          badgePay = '<span class="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold text-[10px] flex items-center justify-center space-x-1"><i class="fa-solid fa-clock"></i><span>Pendiente</span></span>';
+        } else if (inv.payment_state === 'partial') {
+          badgePay = '<span class="px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800 font-bold text-[10px]">Pago Parcial</span>';
+        }
+
+        return `
+          <tr class="hover:bg-purple-50/40 transition">
+            <td class="px-4 py-3 font-mono font-bold text-purple-900">${inv.name || '-'}</td>
+            <td class="px-4 py-3 font-mono text-slate-500">${inv.ref || '<span class="text-slate-300">-</span>'}</td>
+            <td class="px-4 py-3 text-slate-600">${inv.invoice_date || '-'}</td>
+            <td class="px-4 py-3 font-semibold text-slate-800">${inv.partner_name || '-'}</td>
+            <td class="px-4 py-3 text-right font-mono text-slate-600">$${(inv.amount_untaxed || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+            <td class="px-4 py-3 text-right font-mono font-black text-purple-950">$${(inv.amount_total || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+            <td class="px-4 py-3 text-center">${badgeState}</td>
+            <td class="px-4 py-3 text-center">${badgePay}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function filterOdooInvoices(val) {
+      renderOdooInvoices(val);
+    }
+
+    function exportInvoicesCSV() {
+      if (!odooInvoices || odooInvoices.length === 0) {
+        alert("No hay facturas para exportar");
+        return;
+      }
+      let csv = "\uFEFFFolio;Referencia;Fecha;Proveedor;Subtotal MXN;Total MXN;Estatus Contable;Estado de Pago\n";
+      odooInvoices.forEach(i => {
+        csv += [
+          `"${i.name || ''}"`,
+          `"${(i.ref || '').replace(/"/g, '""')}"`,
+          `"${i.invoice_date || ''}"`,
+          `"${(i.partner_name || '').replace(/"/g, '""')}"`,
+          i.amount_untaxed || 0,
+          i.amount_total || 0,
+          `"${i.state || ''}"`,
+          `"${i.payment_state || ''}"`
+        ].join(';') + "\n";
+      });
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      const dateStr = new Date().toISOString().slice(0, 10);
+      link.setAttribute("href", url);
+      link.setAttribute("download", `facturas_odoo_aurani_${dateStr}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
 
     // --- FUNCIONES DE EXPORTACIÓN Y REPORTES ---
