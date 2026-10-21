@@ -449,6 +449,7 @@
         </div>
       </div>
     </section>
+  </main>
 
   <!-- Modal Agregar Producto -->
   <div id="add-modal" class="fixed inset-0 bg-black/40 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4">
@@ -750,6 +751,8 @@
       </form>
     </div>
   </div>
+
+  <script>
     const isLocalOrFile = window.location.protocol === 'file:' || 
                           window.location.protocol === 'content:' || 
                           !window.location.host || 
@@ -1661,7 +1664,6 @@
         btn.disabled = false;
         btn.innerHTML = `<i class="fa-solid fa-check"></i><span>Confirmar Ingreso a Almacén</span>`;
       }
-    }
     }
 
     // --- FUNCIONES DE EXPORTACIÓN Y REPORTES ---
