@@ -731,10 +731,10 @@ const ODOO_CONFIG = {
   url: process.env.ODOO_URL || 'https://grupo-aurani-sa-de-cv.odoo.com/jsonrpc',
   db: process.env.ODOO_DB || 'grupo-aurani-sa-de-cv',
   username: process.env.ODOO_USER || 'alealvaradoreyes1012z@gmail.com',
-  apiKey: process.env.ODOO_API_KEY || '82a0a4399470b561942003276ee4fea3a906debb'
+  apiKey: process.env.ODOO_API_KEY || 'bd517d9f3da24fedfaf9e69bfb3e44cc566c1022'
 };
 
-let cachedOdooUid = 48;
+let cachedOdooUid = null;
 
 async function callOdooRpc(service, method, args) {
   const payload = {
