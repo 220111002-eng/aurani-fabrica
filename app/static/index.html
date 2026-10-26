@@ -1013,6 +1013,28 @@
     let currentAlerts = [];
     let activeCategory = 'TODOS';
 
+    // --- FORMATEADOR DE FECHA Y HORA LOCAL (MÉXICO UTC-6) ---
+    function formatLocalDateTime(rawTimestamp) {
+      if (!rawTimestamp) return '-';
+      let str = String(rawTimestamp).trim();
+      // Si el timestamp no incluye indicador de zona horaria (UTC de SQLite), agregamos T y Z
+      if (!str.includes('Z') && !str.includes('+') && !str.includes('-0')) {
+        str = str.replace(' ', 'T') + 'Z';
+      }
+      const d = new Date(str);
+      if (isNaN(d.getTime())) return rawTimestamp;
+      return d.toLocaleString('es-MX', {
+        timeZone: 'America/Mexico_City',
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+      });
+    }
+
     // --- GESTIÓN DE AUTENTICACIÓN Y OPERADORES ---
     let currentAuthUser = null;
 
@@ -1490,7 +1512,7 @@
       tbody.innerHTML = '';
 
       data.forEach(log => {
-        const dateStr = new Date(log.timestamp).toLocaleString('es-MX');
+        const dateStr = formatLocalDateTime(log.timestamp);
         tbody.innerHTML += `
           <tr class="hover:bg-pink-50/30 text-xs">
             <td class="px-4 py-2.5 font-mono text-slate-400">#${log.id}</td>
@@ -1513,7 +1535,7 @@
         tbody.innerHTML = '';
 
         data.forEach(u => {
-          const dateStr = u.created_at ? new Date(u.created_at).toLocaleString('es-MX') : 'Reciente';
+          const dateStr = u.created_at ? formatLocalDateTime(u.created_at) : 'Reciente';
           tbody.innerHTML += `
             <tr class="hover:bg-pink-50/30 text-xs">
               <td class="px-4 py-2.5 font-mono text-slate-400">#${u.id}</td>
@@ -2114,7 +2136,7 @@
 
       tbody.innerHTML = odooReceptions.map(r => `
         <tr class="hover:bg-emerald-50/40 transition">
-          <td class="px-4 py-3 text-slate-500">${(r.received_at || '').slice(0, 16).replace('T', ' ')}</td>
+          <td class="px-4 py-3 text-slate-500">${formatLocalDateTime(r.received_at)}</td>
           <td class="px-4 py-3 font-mono font-bold text-purple-900">${r.odoo_order_name || '-'}</td>
           <td class="px-4 py-3 font-bold text-slate-800">${r.product_name}</td>
           <td class="px-4 py-3 text-slate-600">${r.partner_name || '-'}</td>
@@ -2387,7 +2409,7 @@
         let csvContent = "\uFEFFID Log;Fecha / Hora;Usuario / Dispositivo;Acción;Entidad (ID);Detalle del Cambio\n";
 
         data.forEach(log => {
-          const dateStr = new Date(log.timestamp).toLocaleString('es-MX');
+          const dateStr = formatLocalDateTime(log.timestamp);
           const row = [
             log.id,
             `"${dateStr}"`,

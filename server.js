@@ -260,8 +260,9 @@ function seedDatabase() {
 
 // Función Helper para Auditoría y Alertas
 function logAudit(entityType, entityId, action, details, userName = 'Android App / Operador') {
-  db.run(`INSERT INTO audit_logs (entity_type, entity_id, action, user_name, details) VALUES (?, ?, ?, ?, ?)`,
-    [entityType, entityId, action, userName, details]
+  const nowUtc = new Date().toISOString();
+  db.run(`INSERT INTO audit_logs (entity_type, entity_id, action, user_name, details, timestamp) VALUES (?, ?, ?, ?, ?, ?)`,
+    [entityType, entityId, action, userName, details, nowUtc]
   );
 }
 
@@ -710,9 +711,16 @@ app.get('/api/quotes', (req, res) => {
 
 // 6. Auditoría de Cambios
 app.get('/api/audit-logs', (req, res) => {
-  db.all(`SELECT * FROM audit_logs ORDER BY timestamp DESC`, (err, logs) => {
+  db.all(`SELECT * FROM audit_logs ORDER BY id DESC`, (err, logs) => {
     if (err) return res.status(500).json({ error: err.message });
-    res.json(logs);
+    const formatted = (logs || []).map(l => {
+      let ts = l.timestamp || '';
+      if (ts && !ts.includes('Z') && !ts.includes('+')) {
+        ts = ts.replace(' ', 'T') + 'Z';
+      }
+      return { ...l, timestamp: ts };
+    });
+    res.json(formatted);
   });
 });
 
