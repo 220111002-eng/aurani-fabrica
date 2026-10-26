@@ -161,10 +161,10 @@
             AA
           </div>
           <div class="min-w-0">
-            <div id="sidebar-user-name" class="text-xs font-extrabold text-slate-900 truncate">Ing. Alejandra Alvarado</div>
+            <div id="sidebar-user-name" class="text-xs font-extrabold text-slate-900 truncate">Ing. Alejandra Alvarado Reyes</div>
             <div id="sidebar-user-role" class="text-[10px] text-slate-400 font-medium truncate flex items-center space-x-1">
               <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span>En línea • Odoo 19</span>
+              <span>Encargada de Almacén • Odoo 19</span>
             </div>
           </div>
         </div>
@@ -915,7 +915,7 @@
 
         <div>
           <label class="block text-xs font-bold text-purple-900">Operador / Almacenista que Recibe</label>
-          <input type="text" id="rec-user" value="Carlos Almacenista" required class="w-full px-3 py-2 bg-purple-50 border border-purple-200 rounded-xl text-sm font-semibold text-purple-950">
+          <input type="text" id="rec-user" value="Ing. Alejandra Alvarado Reyes" required class="w-full px-3 py-2 bg-purple-50 border border-purple-200 rounded-xl text-sm font-semibold text-purple-950">
         </div>
 
         <div class="flex justify-end space-x-2 pt-3">
@@ -945,30 +945,21 @@
       <!-- Accesos Rápidos de Operador -->
       <div class="space-y-2">
         <label class="block text-[11px] font-black text-slate-400 uppercase tracking-wider">Acceso Rápido por Perfil</label>
-        <div class="grid grid-cols-2 gap-2">
-          <button type="button" onclick="quickLogin('Ing. Alejandra Alvarado Reyes', 'admin@fabrica.com', 'DIRECTORA')" class="p-3 bg-pink-50 hover:bg-pink-100 border border-pink-200 rounded-2xl flex flex-col items-start transition cursor-pointer text-left group">
-            <span class="text-xs font-black text-aurani-magenta flex items-center gap-1.5">
-              <i class="fa-solid fa-user-shield text-xs"></i> Alejandra
+        <div class="grid grid-cols-2 gap-3">
+          <!-- Directora General -->
+          <button type="button" onclick="quickLogin('Aura Ilse Camargo Flores', 'directora@aurani.mx', 'Directora General')" class="p-3.5 bg-pink-50 hover:bg-pink-100/90 border border-pink-200 rounded-2xl flex flex-col items-start transition cursor-pointer text-left group shadow-xs">
+            <span class="text-xs font-black text-aurani-magenta flex items-center gap-1.5 leading-snug">
+              <i class="fa-solid fa-crown text-xs text-amber-500"></i> Aura Ilse Camargo Flores
             </span>
-            <span class="text-[10px] text-slate-500 font-medium mt-0.5">Directora General</span>
+            <span class="text-[10px] text-pink-700 font-semibold mt-1">Directora General</span>
           </button>
-          <button type="button" onclick="quickLogin('Lorena (Operador)', 'lore@gmail.com', 'OPERADORA')" class="p-3 bg-slate-50 hover:bg-purple-50 border border-slate-200 rounded-2xl flex flex-col items-start transition cursor-pointer text-left group">
-            <span class="text-xs font-black text-slate-800 group-hover:text-purple-700 flex items-center gap-1.5">
-              <i class="fa-solid fa-boxes-stacked text-xs text-purple-600"></i> Lorena
+
+          <!-- Encargada de Almacén -->
+          <button type="button" onclick="quickLogin('Ing. Alejandra Alvarado Reyes', 'almacen@aurani.mx', 'Encargada de Almacén')" class="p-3.5 bg-slate-50 hover:bg-purple-50 border border-slate-200 rounded-2xl flex flex-col items-start transition cursor-pointer text-left group shadow-xs">
+            <span class="text-xs font-black text-slate-900 group-hover:text-purple-700 flex items-center gap-1.5 leading-snug">
+              <i class="fa-solid fa-boxes-stacked text-xs text-purple-600"></i> Ing. Alejandra Alvarado Reyes
             </span>
-            <span class="text-[10px] text-slate-500 font-medium mt-0.5">Operadora de Planta</span>
-          </button>
-          <button type="button" onclick="quickLogin('Carlos Almacenista', 'operador@fabrica.com', 'ALMACÉN')" class="p-3 bg-slate-50 hover:bg-blue-50 border border-slate-200 rounded-2xl flex flex-col items-start transition cursor-pointer text-left group">
-            <span class="text-xs font-black text-slate-800 group-hover:text-blue-700 flex items-center gap-1.5">
-              <i class="fa-solid fa-truck-ramp-box text-xs text-blue-600"></i> Carlos
-            </span>
-            <span class="text-[10px] text-slate-500 font-medium mt-0.5">Encargado Almacén</span>
-          </button>
-          <button type="button" onclick="quickLogin('Supervisión de Calidad', 'calidad@aurani.mx', 'CALIDAD')" class="p-3 bg-slate-50 hover:bg-amber-50 border border-slate-200 rounded-2xl flex flex-col items-start transition cursor-pointer text-left group">
-            <span class="text-xs font-black text-slate-800 group-hover:text-amber-700 flex items-center gap-1.5">
-              <i class="fa-solid fa-clipboard-check text-xs text-amber-600"></i> Calidad
-            </span>
-            <span class="text-[10px] text-slate-500 font-medium mt-0.5">Control de Calidad</span>
+            <span class="text-[10px] text-slate-500 font-semibold mt-1">Encargada de Almacén</span>
           </button>
         </div>
       </div>
@@ -1064,12 +1055,11 @@
         roleEl.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span><span>${user.role || 'OPERADOR'} • Odoo 19</span>`;
       }
       if (avatarEl) {
-        const initials = (user.name || 'AU')
-          .split(' ')
-          .filter(Boolean)
-          .slice(0, 2)
-          .map(w => w[0].toUpperCase())
-          .join('');
+        const cleanName = (user.name || 'AA')
+          .replace(/^(ing\.|lic\.|dr\.|dra\.)\s*/i, '')
+          .trim();
+        const parts = cleanName.split(' ').filter(Boolean);
+        const initials = parts.slice(0, 2).map(w => w[0].toUpperCase()).join('');
         avatarEl.textContent = initials || 'AU';
       }
 

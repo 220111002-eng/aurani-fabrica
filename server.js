@@ -44,17 +44,28 @@ db.serialize(() => {
     role TEXT DEFAULT 'OPERADOR',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`, () => {
-    // Inicializar cuenta persistente de Lorena si la DB recién se creó o reinició en Render
-    db.get(`SELECT id FROM users WHERE LOWER(TRIM(email)) = 'lore@gmail.com'`, (err, row) => {
-      if (!row) {
-        const defaultHash = bcrypt.hashSync('123', 10);
-        db.run(`INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)`,
-          ['Lorena (Operador)', 'lore@gmail.com', defaultHash, 'OPERADOR'],
-          (e) => {
-            if (!e) console.log("✅ Cuenta 'lore@gmail.com' inicializada correctamente.");
-          }
-        );
-      }
+    // Inicializar cuentas institucionales de Aurani Fábrica
+    const defaultHash = bcrypt.hashSync('123', 10);
+    const institutionalUsers = [
+      { name: 'Aura Ilse Camargo Flores', email: 'directora@aurani.mx', role: 'Directora General' },
+      { name: 'Ing. Alejandra Alvarado Reyes', email: 'almacen@aurani.mx', role: 'Encargada de Almacén' },
+      { name: 'Lorena (Operador)', email: 'lore@gmail.com', role: 'OPERADOR' }
+    ];
+
+    institutionalUsers.forEach(u => {
+      db.get(`SELECT id FROM users WHERE LOWER(TRIM(email)) = ?`, [u.email.toLowerCase()], (err, row) => {
+        if (!row) {
+          db.run(`INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)`,
+            [u.name, u.email.toLowerCase(), defaultHash, u.role],
+            (e) => {
+              if (!e) console.log(`✅ Cuenta institucional '${u.name}' (${u.email}) inicializada correctamente.`);
+            }
+          );
+        } else {
+          // Actualizar nombre y rol si ya existía
+          db.run(`UPDATE users SET name = ?, role = ? WHERE id = ?`, [u.name, u.role, row.id]);
+        }
+      });
     });
   });
 
