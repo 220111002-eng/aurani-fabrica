@@ -222,6 +222,24 @@ db.serialize(() => {
   db.get("SELECT COUNT(*) as count FROM products", (err, row) => {
     if (row && row.count === 0) seedDatabase();
   });
+
+  // Purgar inmediatamente alertas de insumos que ya no existen en el catálogo
+  db.all(`SELECT sku FROM products`, (err, prods) => {
+    if (prods) {
+      const activeSkus = (prods || []).map(p => (p.sku || '').trim().toLowerCase());
+      db.all(`SELECT id, message FROM alerts WHERE alert_type = 'STOCK_BAJO'`, (e, alerts) => {
+        if (alerts) {
+          alerts.forEach(a => {
+            const match = a.message ? a.message.match(/SKU:\s*([^)]+)/) : null;
+            const sku = match ? match[1].trim().toLowerCase() : null;
+            if (!sku || !activeSkus.includes(sku)) {
+              db.run(`DELETE FROM alerts WHERE id = ?`, [a.id]);
+            }
+          });
+        }
+      });
+    }
+  });
 });
 
 function seedDatabase() {
@@ -235,12 +253,8 @@ function seedDatabase() {
     ('Empaques e Insumos Industriales', 'cotizaciones@empaquesind.com', '55-5555-4321', 'Lic. Ana Morales')
   `);
 
-  db.run(`INSERT INTO products (sku, name, category, stock_quantity, min_stock, unit_price, supplier_id) VALUES
-    ('MAT-001', 'Placa de Acero Calibre 10', 'Materias Primas', 45.0, 15.0, 1250.0, 1),
-    ('MAT-002', 'Tornillo Hexagonal 1/2 x 2', 'Fijación', 8.0, 50.0, 4.5, 2),
-    ('MAT-003', 'Caja de Cartón Corrugado 40x40', 'Empaque', 120.0, 100.0, 18.0, 2),
-    ('INS-004', 'Aceite Lubricante Sintético 20L', 'Mantenimiento', 3.0, 5.0, 2400.0, 1)
-  `, function() {
+  // No insertar insumos dummy/ficticios (como tornillos o láminas de ferretería)
+  (function() {
     db.run(`INSERT INTO quotes (supplier_name, quote_number, raw_content, ai_summary, total_amount, status) VALUES
       ('nbf', 'COT-NBF-2026', 'Aceite de coco 1kg $195.79', '🤖 [Node.js IA Engine]: Cotización de nbf procesada automáticamente para Aceite de Coco. MOQ: 1kg.', 195.79, 'RECIBIDA'),
       ('Pochteca', 'COT-POC-2026', 'Alulosa Cristal 25kg $109.96/kg (4 días de entrega)', '🤖 [Node.js IA Engine]: Cotización de Pochteca para Alulosa cristal. MOQ: 25kg, entrega en 4 días.', 2749.00, 'RECIBIDA'),
@@ -661,7 +675,9 @@ app.delete('/api/products/:id', (req, res) => {
     db.run(`DELETE FROM products WHERE id = ?`, [id], function(err) {
       if (err) return res.status(500).json({ error: err.message });
       logAudit('Product', id, 'ELIMINAR', `Producto eliminado: ${prod.name} (SKU: ${prod.sku})`, req.body.user_name || 'Administrador');
-      res.json({ status: 'ok', message: 'Producto eliminado exitosamente' });
+      db.run(`DELETE FROM alerts WHERE alert_type = 'STOCK_BAJO' AND message LIKE ?`, [`%(SKU: ${prod.sku})%`], () => {
+        res.json({ status: 'ok', message: 'Producto eliminado exitosamente' });
+      });
     });
   });
 });
@@ -778,29 +794,41 @@ app.get('/api/alerts', (req, res) => {
       });
 
       function cleanDuplicatesAndSend() {
-        // Eliminar posibles duplicados históricos
-        db.all(`SELECT id, message, status FROM alerts WHERE alert_type = 'STOCK_BAJO' ORDER BY id DESC`, (errDup, allAlerts) => {
-          if (allAlerts && allAlerts.length > 0) {
-            const seen = new Set();
-            const toDelete = [];
-            allAlerts.forEach(a => {
-              const match = a.message ? a.message.match(/SKU:\s*([^)]+)/) : null;
-              const key = match ? match[1].trim() : a.message;
-              if (seen.has(key)) {
-                toDelete.push(a.id);
-              } else {
-                seen.add(key);
-              }
-            });
+        // 1. Obtener todos los SKUs activos en el catálogo de productos
+        db.all(`SELECT sku FROM products`, (errSkus, allProds) => {
+          const activeSkus = new Set((allProds || []).map(p => (p.sku || '').trim().toLowerCase()));
 
-            if (toDelete.length > 0) {
-              db.run(`DELETE FROM alerts WHERE id IN (${toDelete.join(',')})`, () => {
-                sendFinalList();
+          // 2. Eliminar duplicados y purgar alertas de insumos no dados de alta (huérfanos)
+          db.all(`SELECT id, message, status FROM alerts WHERE alert_type = 'STOCK_BAJO' ORDER BY id DESC`, (errDup, allAlerts) => {
+            if (allAlerts && allAlerts.length > 0) {
+              const seen = new Set();
+              const toDelete = [];
+              allAlerts.forEach(a => {
+                const match = a.message ? a.message.match(/SKU:\s*([^)]+)/) : null;
+                const sku = match ? match[1].trim().toLowerCase() : null;
+
+                // Si no tiene SKU o el insumo ya no está dado de alta en catálogo, eliminarlo
+                if (!sku || !activeSkus.has(sku)) {
+                  toDelete.push(a.id);
+                  return;
+                }
+
+                if (seen.has(sku)) {
+                  toDelete.push(a.id);
+                } else {
+                  seen.add(sku);
+                }
               });
-              return;
+
+              if (toDelete.length > 0) {
+                db.run(`DELETE FROM alerts WHERE id IN (${toDelete.join(',')})`, () => {
+                  sendFinalList();
+                });
+                return;
+              }
             }
-          }
-          sendFinalList();
+            sendFinalList();
+          });
         });
       }
 
