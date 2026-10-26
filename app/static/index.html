@@ -4,14 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Aurani 2.0 • Sistema Inteligente de Fábrica e Inventario</title>
-  <!-- Tailwind CSS & FontAwesome & HTML5 QR/Barcode Scanner CDN -->
+  <!-- Tailwind CSS & FontAwesome & HTML5 QR/Barcode Scanner CDN & Google Fonts -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=Cinzel:wght@600;700;800;900&display=swap" rel="stylesheet">
   <style>
     body {
-      background: linear-gradient(135deg, #F9F0F7 0%, #FCF7FA 50%, #E8F5E9 100%);
-      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background-color: #F8F9FA;
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
     }
     .text-aurani-magenta { color: #C2185B; }
     .text-aurani-green { color: #7BC600; }
@@ -19,15 +22,20 @@
     .bg-aurani-green { background-color: #7BC600; }
     .border-aurani-magenta { border-color: #C2185B; }
     
+    .editorial-frame {
+      border: 2px solid #0F172A;
+      background: #FFFFFF;
+    }
+
     .card-aurani {
       background: #FFFFFF;
-      border-radius: 20dp;
-      box-shadow: 0 10px 25px -5px rgba(194, 24, 91, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
-      border: 1px solid rgba(194, 24, 91, 0.1);
+      border-radius: 16px;
+      box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.03), 0 2px 6px -1px rgba(15, 23, 42, 0.02);
+      border: 1px solid rgba(226, 232, 240, 0.85);
     }
     
     @media print {
-      header, .no-print, button, #alerts-container, .border-b { display: none !important; }
+      aside, #sidebar-drawer, header, .no-print, button, #alerts-container, .border-b { display: none !important; }
       body { background: white !important; font-size: 11pt; }
       .card-aurani { border: none !important; box-shadow: none !important; }
       table { width: 100% !important; border-collapse: collapse !important; }
@@ -35,117 +43,201 @@
     }
   </style>
 </head>
-<body class="min-h-screen text-slate-800 flex flex-col">
+<body class="min-h-screen text-slate-900 bg-[#F8F9FA] flex flex-col lg:flex-row antialiased">
 
-  <!-- Header / Navigation Estilo Ultra Elegante Oficial Grupo Aurani -->
-  <header class="bg-white/95 backdrop-blur-md border-b border-slate-100 sticky top-0 z-50 px-8 py-3.5 flex flex-wrap justify-between items-center shadow-xs">
-    <div class="flex items-center">
-      <!-- Solo la imagen del Logo Oficial sin textos redundantes -->
-      <a href="/" class="flex items-center group">
-        <img src="/logo_aurani.png" alt="Aurani Cambiando Vidas" class="h-10 w-auto object-contain transition-transform group-hover:opacity-90">
-      </a>
-    </div>
+  <!-- Overlay Móvil para Sidebar -->
+  <div id="sidebar-backdrop" onclick="closeSidebar()" class="fixed inset-0 bg-slate-950/40 backdrop-blur-xs z-40 hidden lg:hidden transition-opacity"></div>
 
-    <!-- Badges de Estado Discretos -->
-    <div class="flex items-center space-x-3 text-xs font-semibold">
-      <div class="px-3 py-1.5 rounded-full bg-slate-50 text-slate-700 border border-slate-200/80 flex items-center space-x-1.5">
-        <i class="fa-solid fa-boxes-stacked text-aurani-magenta text-xs"></i>
-        <span>Insumos: <strong id="stat-products" class="text-slate-900 ml-0.5">0</strong></span>
-      </div>
-      <div class="px-3 py-1.5 rounded-full bg-amber-50/70 text-amber-800 border border-amber-200/60 flex items-center space-x-1.5">
-        <i class="fa-solid fa-bell text-amber-500 text-xs"></i>
-        <span>Alertas: <strong id="stat-alerts" class="text-amber-900 ml-0.5">0</strong></span>
-      </div>
-      <div class="px-3 py-1.5 rounded-full bg-emerald-50/70 text-emerald-800 border border-emerald-200/60 flex items-center space-x-1.5">
-        <i class="fa-solid fa-wand-magic-sparkles text-aurani-green text-xs"></i>
-        <span>IA: <strong id="stat-quotes" class="text-emerald-900 ml-0.5">0</strong></span>
-      </div>
-    </div>
-  </header>
-
-  <!-- Contenedor Principal -->
-  <main class="flex-1 max-w-7xl w-full mx-auto p-6 space-y-6">
-
-    <!-- Alertas Activas Banner -->
-    <div id="alerts-container" class="hidden space-y-2"></div>
-
-    <!-- Pestañas de Navegación Superior -->
-    <div class="border-b border-pink-200 flex space-x-4 sm:space-x-8 text-sm font-bold overflow-x-auto no-scrollbar pb-1">
-      <button onclick="switchTab('tab-critico')" id="btn-critico" class="pb-3 border-b-2 border-transparent text-rose-600 hover:text-rose-700 flex items-center space-x-2 whitespace-nowrap">
-        <i class="fa-solid fa-triangle-exclamation text-rose-500 animate-pulse"></i>
-        <span>🚨 Stock Crítico</span>
-        <span id="tab-badge-critico" class="px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 text-xs font-extrabold ml-1">0</span>
-      </button>
-      <button onclick="switchTab('tab-inventory')" id="btn-inventory" class="pb-3 border-b-2 border-aurani-magenta text-aurani-magenta flex items-center space-x-2 whitespace-nowrap">
-        <i class="fa-solid fa-boxes-stacked"></i>
-        <span>📦 Todo el Inventario</span>
-      </button>
-      <button onclick="switchTab('tab-materias-primas')" id="btn-materias-primas" class="pb-3 border-b-2 border-transparent text-slate-500 hover:text-aurani-magenta flex items-center space-x-2 whitespace-nowrap">
-        <i class="fa-solid fa-vial-virus text-pink-600"></i>
-        <span>🧪 Materias Primas</span>
-      </button>
-      <button onclick="switchTab('tab-muestras')" id="btn-muestras" class="pb-3 border-b-2 border-transparent text-slate-500 hover:text-aurani-magenta flex items-center space-x-2 whitespace-nowrap">
-        <i class="fa-solid fa-vial-circle-check text-purple-600"></i>
-        <span>🎁 Productos de Muestra</span>
-      </button>
-      <button onclick="switchTab('tab-empaque')" id="btn-empaque" class="pb-3 border-b-2 border-transparent text-slate-500 hover:text-aurani-magenta flex items-center space-x-2 whitespace-nowrap">
-        <i class="fa-solid fa-box-open text-amber-600"></i>
-        <span>📦 Material de Empaque</span>
-      </button>
-      <button onclick="switchTab('tab-ai')" id="btn-ai" class="pb-3 border-b-2 border-transparent text-slate-500 hover:text-aurani-magenta flex items-center space-x-2 whitespace-nowrap">
-        <i class="fa-solid fa-wand-magic-sparkles text-aurani-green"></i>
-        <span>Cotizaciones con IA</span>
-      </button>
-      <button onclick="switchTab('tab-audit')" id="btn-audit" class="pb-3 border-b-2 border-transparent text-slate-500 hover:text-aurani-magenta flex items-center space-x-2 whitespace-nowrap">
-        <i class="fa-solid fa-clock-rotate-left text-indigo-500"></i>
-        <span>Historial y Usuarios</span>
-      </button>
-      <button onclick="switchTab('tab-odoo')" id="btn-odoo" class="pb-3 border-b-2 border-transparent text-slate-500 hover:text-purple-700 flex items-center space-x-2 whitespace-nowrap">
-        <i class="fa-solid fa-cloud-arrow-down text-purple-600"></i>
-        <span>🏢 Órdenes Odoo</span>
-        <span id="tab-badge-odoo" class="px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 text-xs font-extrabold ml-1 hidden">0</span>
-      </button>
-    </div>
-
-    <!-- PESTAÑA 1: INVENTARIO -->
-    <section id="tab-inventory" class="space-y-8">
-      <!-- Encabezado General -->
-      <div class="flex justify-between items-center flex-wrap gap-4">
-        <div>
-          <h2 class="text-xl font-bold text-slate-800">Catálogo e Inventario por Áreas</h2>
-          <p class="text-xs text-slate-500">Clasificación en tiempo real: Materias Primas, Productos de Muestra y Empaque/Embalaje.</p>
-        </div>
-        <div class="flex items-center space-x-2 no-print">
-          <button onclick="exportProductsCSV()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20 flex items-center space-x-2">
-            <i class="fa-solid fa-file-excel"></i>
-            <span>Exportar Excel (CSV)</span>
-          </button>
-          <button onclick="printInventoryReport()" class="px-3.5 py-2 bg-slate-700 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-md flex items-center space-x-2">
-            <i class="fa-solid fa-file-pdf"></i>
-            <span>Imprimir / PDF</span>
-          </button>
-          <button onclick="openAddProductModal('Materias Primas')" class="px-4 py-2 bg-aurani-magenta hover:bg-pink-700 text-white rounded-xl text-xs font-bold shadow-md shadow-pink-600/20 flex items-center space-x-2">
-            <i class="fa-solid fa-plus"></i>
-            <span>Agregar Nuevo Insumo</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Barra de Búsqueda Rápida y Escáner de Código de Barras -->
-      <div class="card-aurani p-4 no-print flex flex-col sm:flex-row items-center gap-3 bg-white/90">
-        <div class="relative flex-1 w-full">
-          <i class="fa-solid fa-barcode absolute left-3.5 top-3 text-pink-500 text-sm"></i>
-          <input type="text" id="web-search-input" oninput="filterWebInventory(this.value)" placeholder="🔍 Buscar por SKU (código de barras), nombre o categoría..." class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-pink-200 rounded-xl text-sm focus:outline-none focus:border-aurani-magenta shadow-inner font-medium">
-        </div>
-        <button onclick="openBarcodeScannerModal()" class="w-full sm:w-auto px-5 py-2.5 bg-aurani-magenta hover:bg-pink-700 text-white rounded-xl text-xs font-bold shadow-md shadow-pink-600/20 flex items-center justify-center space-x-2 whitespace-nowrap">
-          <i class="fa-solid fa-camera text-sm"></i>
-          <span>📷 Escanear con Cámara</span>
+  <!-- Barra Lateral Izquierda (Sidebar Ultra Elegante) -->
+  <aside id="sidebar-drawer" class="fixed lg:sticky top-0 inset-y-0 left-0 w-72 lg:w-80 h-screen bg-white border-r border-slate-200/90 z-50 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out flex flex-col justify-between shrink-0 shadow-2xl lg:shadow-none overflow-y-auto">
+    
+    <div class="p-6 space-y-6">
+      <!-- Encabezado Móvil con Botón Cerrar -->
+      <div class="flex items-center justify-between lg:justify-center">
+        <a href="/" class="flex items-center justify-center group">
+          <img src="/logo_aurani.png" alt="Grupo Aurani" class="h-10 w-auto object-contain transition-transform group-hover:scale-105">
+        </a>
+        <button onclick="closeSidebar()" class="lg:hidden p-2 text-slate-400 hover:text-slate-800 rounded-lg">
+          <i class="fa-solid fa-xmark text-lg"></i>
         </button>
-        <div class="hidden sm:flex items-center text-xs text-slate-600 bg-pink-50/80 px-3.5 py-2.5 rounded-xl border border-pink-100 whitespace-nowrap">
-          <i class="fa-solid fa-keyboard text-aurani-magenta mr-2 text-sm"></i>
-          <span>Lector USB Físico Activo</span>
+      </div>
+
+      <!-- Cuadro de Marca Editorial Estilo "El Pimentón" -->
+      <div class="border-2 border-slate-900 p-3.5 text-center bg-white shadow-xs">
+        <div class="text-[8px] font-black tracking-[0.35em] uppercase text-slate-400">LABORATORIO & FÁBRICA</div>
+        <div class="text-xl font-black tracking-[0.22em] uppercase text-slate-950 my-1 font-serif" style="font-family: 'Cinzel', serif;">GRUPO AURANI</div>
+        <div class="text-[8px] font-extrabold tracking-[0.25em] uppercase text-aurani-magenta">SISTEMA INTELIGENTE 2.0</div>
+      </div>
+
+      <!-- Menú de Navegación Vertical -->
+      <nav class="space-y-5">
+        <!-- Grupo 1 -->
+        <div class="space-y-1">
+          <div class="px-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-1.5">Vistas Generales</div>
+          <button onclick="switchTab('tab-inventory')" id="btn-inventory" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold bg-slate-900 text-white shadow-xs transition">
+            <div class="flex items-center space-x-3">
+              <i class="fa-solid fa-boxes-stacked text-sm"></i>
+              <span>Todo el Inventario</span>
+            </div>
+          </button>
+          <button onclick="switchTab('tab-critico')" id="btn-critico" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 hover:text-rose-700 transition">
+            <div class="flex items-center space-x-3">
+              <i class="fa-solid fa-triangle-exclamation text-rose-500 animate-pulse text-sm"></i>
+              <span>Stock Crítico</span>
+            </div>
+            <span id="tab-badge-critico" class="px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[10px] font-black">0</span>
+          </button>
+        </div>
+
+        <!-- Grupo 2 -->
+        <div class="space-y-1">
+          <div class="px-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-1.5">Áreas de Producción</div>
+          <button onclick="switchTab('tab-materias-primas')" id="btn-materias-primas" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition">
+            <div class="flex items-center space-x-3">
+              <i class="fa-solid fa-vial-virus text-pink-600 text-sm"></i>
+              <span>Materias Primas</span>
+            </div>
+          </button>
+          <button onclick="switchTab('tab-muestras')" id="btn-muestras" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition">
+            <div class="flex items-center space-x-3">
+              <i class="fa-solid fa-vial-circle-check text-purple-600 text-sm"></i>
+              <span>Productos de Muestra</span>
+            </div>
+          </button>
+          <button onclick="switchTab('tab-empaque')" id="btn-empaque" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition">
+            <div class="flex items-center space-x-3">
+              <i class="fa-solid fa-box-open text-amber-600 text-sm"></i>
+              <span>Material de Empaque</span>
+            </div>
+          </button>
+        </div>
+
+        <!-- Grupo 3 -->
+        <div class="space-y-1">
+          <div class="px-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-1.5">ERP & Auditoría</div>
+          <button onclick="switchTab('tab-odoo')" id="btn-odoo" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-purple-50 hover:text-purple-900 transition">
+            <div class="flex items-center space-x-3">
+              <i class="fa-solid fa-cloud-arrow-down text-purple-600 text-sm"></i>
+              <span>Órdenes & Facturas Odoo</span>
+            </div>
+            <span id="tab-badge-odoo" class="px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 text-[10px] font-black ml-1 hidden">0</span>
+          </button>
+          <button onclick="switchTab('tab-ai')" id="btn-ai" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition">
+            <div class="flex items-center space-x-3">
+              <i class="fa-solid fa-wand-magic-sparkles text-aurani-green text-sm"></i>
+              <span>Cotizaciones con IA</span>
+            </div>
+          </button>
+          <button onclick="switchTab('tab-audit')" id="btn-audit" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition">
+            <div class="flex items-center space-x-3">
+              <i class="fa-solid fa-clock-rotate-left text-indigo-500 text-sm"></i>
+              <span>Historial & Usuarios</span>
+            </div>
+          </button>
+        </div>
+      </nav>
+    </div>
+
+    <!-- Pie del Sidebar con Métricas y Perfil -->
+    <div class="p-6 pt-0 space-y-4">
+      <div class="p-3.5 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-2">
+        <div class="flex justify-between items-center text-[11px] font-bold text-slate-600">
+          <span class="flex items-center space-x-1.5"><i class="fa-solid fa-boxes-stacked text-aurani-magenta text-xs"></i><span>Insumos</span></span>
+          <span id="stat-products" class="font-extrabold text-slate-900">0</span>
+        </div>
+        <div class="flex justify-between items-center text-[11px] font-bold text-slate-600">
+          <span class="flex items-center space-x-1.5"><i class="fa-solid fa-bell text-amber-500 text-xs"></i><span>Alertas</span></span>
+          <span id="stat-alerts" class="font-extrabold text-amber-900">0</span>
+        </div>
+        <div class="flex justify-between items-center text-[11px] font-bold text-slate-600">
+          <span class="flex items-center space-x-1.5"><i class="fa-solid fa-wand-magic-sparkles text-aurani-green text-xs"></i><span>IA Ingestas</span></span>
+          <span id="stat-quotes" class="font-extrabold text-emerald-900">0</span>
         </div>
       </div>
+
+      <div class="flex items-center space-x-3 pt-3 border-t border-slate-100">
+        <div class="w-9 h-9 rounded-xl bg-slate-900 text-white flex items-center justify-center font-black text-xs shadow-xs">
+          AA
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="text-xs font-extrabold text-slate-900 truncate">Ing. Alejandra Alvarado</div>
+          <div class="text-[10px] text-slate-400 font-medium truncate flex items-center space-x-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>En línea • Odoo 19 Activo</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Área de Contenido Principal -->
+  <div class="flex-1 flex flex-col min-w-0 min-h-screen overflow-x-hidden">
+    
+    <!-- Barra Superior de Navegación y Acciones -->
+    <header class="bg-white/95 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-30 px-6 sm:px-8 py-3.5 flex justify-between items-center shadow-xs">
+      <div class="flex items-center space-x-3.5">
+        <button onclick="toggleSidebar()" class="lg:hidden p-2 rounded-xl text-slate-700 hover:bg-slate-100 transition focus:outline-none cursor-pointer">
+          <i class="fa-solid fa-bars-staggered text-lg"></i>
+        </button>
+        <div>
+          <span class="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">PLANTA INDUSTRIAL</span>
+          <h1 id="current-section-title" class="text-base sm:text-lg font-black text-slate-950 tracking-tight">Catálogo e Inventario por Áreas</h1>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-2.5 no-print">
+        <button onclick="exportProductsCSV()" class="hidden sm:flex px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20 items-center space-x-2 cursor-pointer transition">
+          <i class="fa-solid fa-file-excel"></i>
+          <span>Excel (CSV)</span>
+        </button>
+        <button onclick="printInventoryReport()" class="hidden md:flex px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold shadow-sm items-center space-x-2 cursor-pointer transition">
+          <i class="fa-solid fa-file-pdf"></i>
+          <span>Imprimir</span>
+        </button>
+        <button onclick="openAddProductModal('Materias Primas')" class="px-4 py-2 bg-aurani-magenta hover:bg-pink-700 text-white rounded-xl text-xs font-bold shadow-md shadow-pink-600/20 flex items-center space-x-2 cursor-pointer transition">
+          <i class="fa-solid fa-plus"></i>
+          <span>Nuevo Insumo</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Contenedor Principal de Secciones -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-6 sm:p-8 space-y-6">
+
+      <!-- Alertas Activas Banner -->
+      <div id="alerts-container" class="hidden space-y-2"></div>
+
+      <!-- PESTAÑA 1: INVENTARIO -->
+      <section id="tab-inventory" class="space-y-8">
+        <!-- Encabezado General -->
+        <div class="flex justify-between items-center flex-wrap gap-4">
+          <div>
+            <h2 class="text-xl font-black text-slate-900 tracking-tight">Catálogo e Inventario por Áreas</h2>
+            <p class="text-xs text-slate-500 font-medium">Clasificación en tiempo real: Materias Primas, Productos de Muestra y Empaque/Embalaje.</p>
+          </div>
+        </div>
+
+        <!-- Barra de Búsqueda Rápida y Escáner con Diseño Editorial Inspirado en la Referencia -->
+        <div class="card-aurani p-4 no-print flex flex-col md:flex-row items-center justify-between gap-4 bg-white">
+          <div class="flex items-center w-full max-w-2xl border-2 border-slate-900 rounded-none overflow-hidden bg-white shadow-xs">
+            <input type="text" id="web-search-input" oninput="filterWebInventory(this.value)" placeholder="Buscar por SKU (código de barras), nombre o categoría..." class="w-full px-4 py-2.5 text-xs sm:text-sm font-medium focus:outline-none placeholder-slate-400 bg-transparent">
+            <button type="button" class="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 text-xs font-bold transition flex items-center space-x-1.5 whitespace-nowrap">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <span>Buscar</span>
+            </button>
+          </div>
+
+          <div class="flex items-center space-x-2 w-full md:w-auto justify-end">
+            <button onclick="openBarcodeScannerModal()" class="w-full md:w-auto px-4 py-2.5 bg-aurani-magenta hover:bg-pink-700 text-white rounded-xl text-xs font-bold shadow-md shadow-pink-600/20 flex items-center justify-center space-x-2 whitespace-nowrap cursor-pointer transition">
+              <i class="fa-solid fa-camera text-sm"></i>
+              <span>📷 Escanear Cámara</span>
+            </button>
+            <div class="hidden xl:flex items-center text-xs text-slate-600 bg-slate-50 px-3.5 py-2.5 rounded-xl border border-slate-200 whitespace-nowrap">
+              <i class="fa-solid fa-keyboard text-slate-800 mr-2 text-sm"></i>
+              <span>Lector Físico Activo</span>
+            </div>
+          </div>
+        </div>
 
       <!-- SECCIÓN 1: MATERIAS PRIMAS -->
       <div id="sec-materias-primas" class="space-y-3">
@@ -531,6 +623,7 @@
       </div>
     </section>
   </main>
+</div>
 
   <!-- Modal Agregar Producto -->
   <div id="add-modal" class="fixed inset-0 bg-black/40 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4">
@@ -1475,6 +1568,20 @@
       }
     }
 
+    function toggleSidebar() {
+      const drawer = document.getElementById('sidebar-drawer');
+      const backdrop = document.getElementById('sidebar-backdrop');
+      if (drawer) drawer.classList.toggle('-translate-x-full');
+      if (backdrop) backdrop.classList.toggle('hidden');
+    }
+
+    function closeSidebar() {
+      const drawer = document.getElementById('sidebar-drawer');
+      const backdrop = document.getElementById('sidebar-backdrop');
+      if (drawer) drawer.classList.add('-translate-x-full');
+      if (backdrop) backdrop.classList.add('hidden');
+    }
+
     function switchTab(tabId) {
       if (tabId === 'tab-critico') {
         activeCategory = 'CRITICO';
@@ -1482,6 +1589,25 @@
         activeCategory = 'TODOS';
       }
       renderProducts();
+
+      if (window.innerWidth < 1024) {
+        closeSidebar();
+      }
+
+      const titles = {
+        'tab-inventory': 'Catálogo e Inventario por Áreas',
+        'tab-critico': '🚨 Stock Crítico y Alertas',
+        'tab-materias-primas': '🧪 Materias Primas e Insumos Industriales',
+        'tab-muestras': '🎁 Productos de Muestra y Ensayos',
+        'tab-empaque': '📦 Material de Empaque y Embalaje',
+        'tab-odoo': '🏢 Órdenes de Compra y Facturas Odoo 19',
+        'tab-ai': '✨ Ingesta y Cotizaciones con IA',
+        'tab-audit': '📜 Historial de Auditoría e Inspección'
+      };
+      const titleEl = document.getElementById('current-section-title');
+      if (titleEl && titles[tabId]) {
+        titleEl.innerText = titles[tabId];
+      }
 
       const isCategoryFilter = ['tab-critico', 'tab-materias-primas', 'tab-muestras', 'tab-empaque'].includes(tabId);
       
@@ -1536,19 +1662,19 @@
         const targetTab = bId.replace('btn-', 'tab-');
         if (targetTab === tabId) {
           if (bId === 'btn-critico') {
-            b.className = "pb-3 border-b-2 border-rose-600 text-rose-600 flex items-center space-x-2 font-bold whitespace-nowrap";
+            b.className = "w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold bg-rose-50 text-rose-700 border-l-4 border-rose-600 shadow-xs transition";
           } else if (bId === 'btn-odoo') {
-            b.className = "pb-3 border-b-2 border-purple-600 text-purple-700 flex items-center space-x-2 font-bold whitespace-nowrap";
+            b.className = "w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold bg-purple-50 text-purple-900 border-l-4 border-purple-700 shadow-xs transition";
           } else {
-            b.className = "pb-3 border-b-2 border-aurani-magenta text-aurani-magenta flex items-center space-x-2 font-bold whitespace-nowrap";
+            b.className = "w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold bg-slate-900 text-white shadow-xs transition";
           }
         } else {
           if (bId === 'btn-critico') {
-            b.className = "pb-3 border-b-2 border-rose-600/30 text-rose-600 hover:text-rose-700 flex items-center space-x-2 font-bold whitespace-nowrap";
+            b.className = "w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50/70 hover:text-rose-700 transition";
           } else if (bId === 'btn-odoo') {
-            b.className = "pb-3 border-b-2 border-transparent text-slate-500 hover:text-purple-700 flex items-center space-x-2 font-bold whitespace-nowrap";
+            b.className = "w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-purple-50 hover:text-purple-900 transition";
           } else {
-            b.className = "pb-3 border-b-2 border-transparent text-slate-500 hover:text-aurani-magenta flex items-center space-x-2 font-bold whitespace-nowrap";
+            b.className = "w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition";
           }
         }
       });
