@@ -264,7 +264,7 @@ function createAlert(alertType, message, productSku = null) {
   const query = sku
     ? `SELECT id, status, message FROM alerts WHERE alert_type = ? AND message LIKE ? ORDER BY id DESC LIMIT 1`
     : `SELECT id, status, message FROM alerts WHERE alert_type = ? AND message = ? ORDER BY id DESC LIMIT 1`;
-  const params = sku ? [alertType, `%${sku}%`] : [alertType, message];
+  const params = sku ? [alertType, `%(SKU: ${sku})%`] : [alertType, message];
 
   db.get(query, params, (err, row) => {
     if (!row) {
@@ -287,9 +287,9 @@ function checkProductLowStock(product) {
       createAlert('STOCK_BAJO', msg, product.sku);
       logAudit('Product', product.id, 'ALERTA_STOCK_BAJO', msg, 'Motor de Inventario Node.js');
     } else {
-      // Si el stock actual es mayor al mínimo, eliminar cualquier alerta de stock bajo para este insumo
-      db.run(`DELETE FROM alerts WHERE alert_type = 'STOCK_BAJO' AND (message LIKE ? OR message LIKE ?)`,
-        [`%${product.sku}%`, `%${product.name}%`],
+      // Si el stock actual es mayor al mínimo, eliminar cualquier alerta de stock bajo usando el SKU único
+      db.run(`DELETE FROM alerts WHERE alert_type = 'STOCK_BAJO' AND message LIKE ?`,
+        [`%(SKU: ${product.sku})%`],
         (delErr) => {
           if (!delErr) console.log(`✅ Alerta de stock crítico removida para ${product.name} (${product.sku}) - Stock actual: ${stockQty}`);
         }
@@ -621,8 +621,8 @@ const handleProductUpdate = (req, res) => {
           if (updatedProd) {
             checkProductLowStock(updatedProd);
             if (parseFloat(updatedProd.stock_quantity) > parseFloat(updatedProd.min_stock)) {
-              db.run(`DELETE FROM alerts WHERE alert_type = 'STOCK_BAJO' AND (message LIKE ? OR message LIKE ?)`,
-                [`%${updatedProd.sku}%`, `%${updatedProd.name}%`],
+              db.run(`DELETE FROM alerts WHERE alert_type = 'STOCK_BAJO' AND message LIKE ?`,
+                [`%(SKU: ${updatedProd.sku})%`],
                 (delErr) => {
                   logAudit('Product', id, 'ALERTA_RESUELTA', `Alerta de stock crítico resuelta automáticamente al restablecer stock a ${updatedProd.stock_quantity}`, user);
                 }
@@ -707,11 +707,11 @@ app.get('/api/audit-logs', (req, res) => {
 
 // 7. Alertas de Stock Crítico (Sincronización limpia, respeto de ATENDIDA y sin duplicados)
 app.get('/api/alerts', (req, res) => {
-  // 1. Limpiar alertas de stock bajo para insumos que ya tienen stock suficiente (> min_stock)
+  // 1. Limpiar alertas de stock bajo para insumos que ya tienen stock suficiente (> min_stock) usando su SKU exacto
   db.all(`SELECT sku, name FROM products WHERE stock_quantity > min_stock`, (errProds, okProds) => {
     if (okProds && okProds.length > 0) {
       okProds.forEach(p => {
-        db.run(`DELETE FROM alerts WHERE alert_type = 'STOCK_BAJO' AND (message LIKE ? OR message LIKE ?)`, [`%${p.sku}%`, `%${p.name}%`]);
+        db.run(`DELETE FROM alerts WHERE alert_type = 'STOCK_BAJO' AND message LIKE ?`, [`%(SKU: ${p.sku})%`]);
       });
     }
 
@@ -734,8 +734,8 @@ app.get('/api/alerts', (req, res) => {
         const msg = `¡ALERTA MÓVIL! Stock crítico en '${p.name}' (SKU: ${p.sku}). Disponibles: ${p.stock_quantity} (Mínimo: ${p.min_stock})`;
 
         db.get(
-          `SELECT id, status, message FROM alerts WHERE alert_type = 'STOCK_BAJO' AND (message LIKE ? OR message LIKE ?) ORDER BY id DESC LIMIT 1`,
-          [`%${p.sku}%`, `%${p.name}%`],
+          `SELECT id, status, message FROM alerts WHERE alert_type = 'STOCK_BAJO' AND message LIKE ? ORDER BY id DESC LIMIT 1`,
+          [`%(SKU: ${p.sku})%`],
           (errGet, existing) => {
             if (!existing) {
               db.run(`INSERT INTO alerts (alert_type, message, status) VALUES ('STOCK_BAJO', ?, 'PENDIENTE')`, [msg], () => {
@@ -809,8 +809,8 @@ app.post('/api/alerts/:id/read', (req, res) => {
     const sku = match ? match[1].trim() : null;
 
     if (sku) {
-      db.run(`UPDATE alerts SET status = 'ATENDIDA' WHERE alert_type = 'STOCK_BAJO' AND message LIKE ?`, [`%${sku}%`], (errUp) => {
-        db.run(`DELETE FROM alerts WHERE alert_type = 'STOCK_BAJO' AND message LIKE ? AND id != ?`, [`%${sku}%`, alertId], () => {
+      db.run(`UPDATE alerts SET status = 'ATENDIDA' WHERE alert_type = 'STOCK_BAJO' AND message LIKE ?`, [`%(SKU: ${sku})%`], (errUp) => {
+        db.run(`DELETE FROM alerts WHERE alert_type = 'STOCK_BAJO' AND message LIKE ? AND id != ?`, [`%(SKU: ${sku})%`, alertId], () => {
           logAudit('Alert', alertId, 'ALERTA_ATENDIDA', `Alerta de stock crítico marcada como ATENDIDA para SKU ${sku}`, req.body?.user_name || 'Operador / App');
           res.json({ status: 'ok', message: 'Alerta atendida con éxito' });
         });
@@ -1065,8 +1065,8 @@ app.post('/api/odoo/receive', (req, res) => {
 
             // Resolver alertas de stock crítico si el stock supera el mínimo
             if (newStock > existingProd.min_stock) {
-              db.run(`DELETE FROM alerts WHERE alert_type = 'STOCK_BAJO' AND (message LIKE ? OR message LIKE ?)`,
-                [`%${existingProd.sku}%`, `%${existingProd.name}%`],
+              db.run(`DELETE FROM alerts WHERE alert_type = 'STOCK_BAJO' AND message LIKE ?`,
+                [`%(SKU: ${existingProd.sku})%`],
                 () => {}
               );
             }
