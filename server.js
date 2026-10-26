@@ -254,10 +254,26 @@ function logAudit(entityType, entityId, action, details, userName = 'Android App
   );
 }
 
-function createAlert(alertType, message) {
-  db.get(`SELECT id FROM alerts WHERE alert_type = ? AND message = ? AND status = 'PENDIENTE'`, [alertType, message], (err, row) => {
+function createAlert(alertType, message, productSku = null) {
+  let sku = productSku;
+  if (!sku) {
+    const match = message.match(/SKU:\s*([^)]+)/);
+    if (match) sku = match[1].trim();
+  }
+
+  const query = sku
+    ? `SELECT id, status, message FROM alerts WHERE alert_type = ? AND message LIKE ? ORDER BY id DESC LIMIT 1`
+    : `SELECT id, status, message FROM alerts WHERE alert_type = ? AND message = ? ORDER BY id DESC LIMIT 1`;
+  const params = sku ? [alertType, `%${sku}%`] : [alertType, message];
+
+  db.get(query, params, (err, row) => {
     if (!row) {
       db.run(`INSERT INTO alerts (alert_type, message, status) VALUES (?, ?, 'PENDIENTE')`, [alertType, message]);
+    } else {
+      // Si la alerta ya existe y fue marcada como ATENDIDA, ¡se respeta y no se revierte a PENDIENTE!
+      if (row.message !== message) {
+        db.run(`UPDATE alerts SET message = ? WHERE id = ?`, [message, row.id]);
+      }
     }
   });
 }
@@ -268,7 +284,7 @@ function checkProductLowStock(product) {
     const minStock = parseFloat(product.min_stock);
     if (stockQty <= minStock) {
       const msg = `¡ALERTA MÓVIL! Stock crítico en '${product.name}' (SKU: ${product.sku}). Disponibles: ${stockQty} (Mínimo: ${minStock})`;
-      createAlert('STOCK_BAJO', msg);
+      createAlert('STOCK_BAJO', msg, product.sku);
       logAudit('Product', product.id, 'ALERTA_STOCK_BAJO', msg, 'Motor de Inventario Node.js');
     } else {
       // Si el stock actual es mayor al mínimo, eliminar cualquier alerta de stock bajo para este insumo
@@ -689,9 +705,9 @@ app.get('/api/audit-logs', (req, res) => {
   });
 });
 
-// 7. Alertas Pendientes (Sincronización dinámica en tiempo real de todos los productos en stock crítico)
+// 7. Alertas de Stock Crítico (Sincronización limpia, respeto de ATENDIDA y sin duplicados)
 app.get('/api/alerts', (req, res) => {
-  // 1. Limpiar alertas de stock bajo para productos que ya tienen stock suficiente (> min_stock)
+  // 1. Limpiar alertas de stock bajo para insumos que ya tienen stock suficiente (> min_stock)
   db.all(`SELECT sku, name FROM products WHERE stock_quantity > min_stock`, (errProds, okProds) => {
     if (okProds && okProds.length > 0) {
       okProds.forEach(p => {
@@ -699,27 +715,120 @@ app.get('/api/alerts', (req, res) => {
       });
     }
 
-    // 2. Asegurar alertas para productos con stock crítico (<= min_stock)
+    // 2. Obtener insumos con stock crítico (<= min_stock)
     db.all(`SELECT * FROM products WHERE stock_quantity <= min_stock`, (err, lowStockProds) => {
-      if (lowStockProds && lowStockProds.length > 0) {
-        lowStockProds.forEach(p => {
-          const msg = `¡ALERTA MÓVIL! Stock crítico en '${p.name}' (SKU: ${p.sku}). Disponibles: ${p.stock_quantity} (Mínimo: ${p.min_stock})`;
-          createAlert('STOCK_BAJO', msg);
+      if (err) return res.status(500).json({ error: err.message });
+
+      if (!lowStockProds || lowStockProds.length === 0) {
+        db.run(`DELETE FROM alerts WHERE alert_type = 'STOCK_BAJO'`, () => {
+          db.all(`SELECT * FROM alerts ORDER BY id DESC`, (err2, alerts) => {
+            res.json(alerts || []);
+          });
+        });
+        return;
+      }
+
+      // 3. Procesar cada insumo crítico: mantener ATENDIDA si ya fue atendida, o crear PENDIENTE si es nueva
+      let pendingOps = lowStockProds.length;
+      lowStockProds.forEach(p => {
+        const msg = `¡ALERTA MÓVIL! Stock crítico en '${p.name}' (SKU: ${p.sku}). Disponibles: ${p.stock_quantity} (Mínimo: ${p.min_stock})`;
+
+        db.get(
+          `SELECT id, status, message FROM alerts WHERE alert_type = 'STOCK_BAJO' AND (message LIKE ? OR message LIKE ?) ORDER BY id DESC LIMIT 1`,
+          [`%${p.sku}%`, `%${p.name}%`],
+          (errGet, existing) => {
+            if (!existing) {
+              db.run(`INSERT INTO alerts (alert_type, message, status) VALUES ('STOCK_BAJO', ?, 'PENDIENTE')`, [msg], () => {
+                pendingOps--;
+                if (pendingOps <= 0) cleanDuplicatesAndSend();
+              });
+            } else {
+              // Respetar estado ATENDIDA o PENDIENTE. Actualizar texto de mensaje si cambió la cantidad de stock
+              if (existing.message !== msg) {
+                db.run(`UPDATE alerts SET message = ? WHERE id = ?`, [msg, existing.id], () => {
+                  pendingOps--;
+                  if (pendingOps <= 0) cleanDuplicatesAndSend();
+                });
+              } else {
+                pendingOps--;
+                if (pendingOps <= 0) cleanDuplicatesAndSend();
+              }
+            }
+          }
+        );
+      });
+
+      function cleanDuplicatesAndSend() {
+        // Eliminar posibles duplicados históricos
+        db.all(`SELECT id, message, status FROM alerts WHERE alert_type = 'STOCK_BAJO' ORDER BY id DESC`, (errDup, allAlerts) => {
+          if (allAlerts && allAlerts.length > 0) {
+            const seen = new Set();
+            const toDelete = [];
+            allAlerts.forEach(a => {
+              const match = a.message ? a.message.match(/SKU:\s*([^)]+)/) : null;
+              const key = match ? match[1].trim() : a.message;
+              if (seen.has(key)) {
+                toDelete.push(a.id);
+              } else {
+                seen.add(key);
+              }
+            });
+
+            if (toDelete.length > 0) {
+              db.run(`DELETE FROM alerts WHERE id IN (${toDelete.join(',')})`, () => {
+                sendFinalList();
+              });
+              return;
+            }
+          }
+          sendFinalList();
         });
       }
 
-      // 3. Devolver lista de alertas activas
-      db.all(`SELECT * FROM alerts ORDER BY id DESC`, (err2, alerts) => {
-        if (err2) return res.status(500).json({ error: err2.message });
-        res.json(alerts || []);
-      });
+      function sendFinalList() {
+        db.all(`SELECT * FROM alerts ORDER BY id DESC`, (errFinal, finalAlerts) => {
+          if (errFinal) return res.status(500).json({ error: errFinal.message });
+          res.json(finalAlerts || []);
+        });
+      }
     });
   });
 });
 
 app.post('/api/alerts/:id/read', (req, res) => {
-  db.run(`UPDATE alerts SET status = 'ATENDIDA' WHERE id = ?`, [req.params.id], (err) => {
-    res.json({ status: 'ok' });
+  const alertId = parseInt(req.params.id, 10);
+  if (isNaN(alertId)) {
+    return res.status(400).json({ error: 'ID de alerta inválido' });
+  }
+
+  db.get(`SELECT * FROM alerts WHERE id = ?`, [alertId], (err, alert) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!alert) return res.status(404).json({ error: 'Alerta no encontrada' });
+
+    const match = alert.message ? alert.message.match(/SKU:\s*([^)]+)/) : null;
+    const sku = match ? match[1].trim() : null;
+
+    if (sku) {
+      db.run(`UPDATE alerts SET status = 'ATENDIDA' WHERE alert_type = 'STOCK_BAJO' AND message LIKE ?`, [`%${sku}%`], (errUp) => {
+        db.run(`DELETE FROM alerts WHERE alert_type = 'STOCK_BAJO' AND message LIKE ? AND id != ?`, [`%${sku}%`, alertId], () => {
+          logAudit('Alert', alertId, 'ALERTA_ATENDIDA', `Alerta de stock crítico marcada como ATENDIDA para SKU ${sku}`, req.body?.user_name || 'Operador / App');
+          res.json({ status: 'ok', message: 'Alerta atendida con éxito' });
+        });
+      });
+    } else {
+      db.run(`UPDATE alerts SET status = 'ATENDIDA' WHERE id = ?`, [alertId], (errUp) => {
+        logAudit('Alert', alertId, 'ALERTA_ATENDIDA', `Alerta marcada como ATENDIDA: ${alert.message}`, req.body?.user_name || 'Operador / App');
+        res.json({ status: 'ok', message: 'Alerta atendida con éxito' });
+      });
+    }
+  });
+});
+
+app.post('/api/alerts/mark-all-read', (req, res) => {
+  db.run(`UPDATE alerts SET status = 'ATENDIDA' WHERE status = 'PENDIENTE'`, (err) => {
+    if (err) return res.status(500).json({ error: err.message });
+    logAudit('Alert', 0, 'TODAS_ALERTAS_ATENDIDAS', 'Todas las alertas de stock crítico marcadas como ATENDIDAS', req.body?.user_name || 'Operador / Dashboard');
+    res.json({ status: 'ok', message: 'Todas las alertas fueron marcadas como atendidas' });
   });
 });
 
