@@ -431,11 +431,24 @@
 
       <!-- TABLA USUARIOS REGISTRADOS -->
       <div class="card-aurani overflow-hidden shadow-sm mt-6">
-        <div class="p-4 bg-pink-50/40 border-b border-pink-100 flex justify-between items-center">
-          <h3 class="text-sm font-bold text-aurani-magenta flex items-center space-x-2">
-            <i class="fa-solid fa-users"></i>
-            <span>Usuarios Registrados en el Sistema (Nube / App Android)</span>
-          </h3>
+        <div class="p-4 bg-pink-50/40 border-b border-pink-100 flex justify-between items-center flex-wrap gap-2">
+          <div class="flex items-center space-x-2.5">
+            <h3 class="text-sm font-bold text-aurani-magenta flex items-center space-x-2">
+              <i class="fa-solid fa-users"></i>
+              <span>Usuarios Registrados en el Sistema (Nube / App Android)</span>
+            </h3>
+            <span id="badge-users-count" class="px-2.5 py-0.5 rounded-full bg-pink-100 text-aurani-magenta text-xs font-black font-mono">0</span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button type="button" onclick="fetchUsers(this)" title="Actualizar lista de usuarios" class="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer shadow-2xs">
+              <i class="fa-solid fa-arrows-rotate text-purple-700"></i>
+              <span>Actualizar</span>
+            </button>
+            <button type="button" onclick="openRegisterUserModal()" class="px-3.5 py-1.5 bg-aurani-magenta hover:bg-pink-700 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer shadow-sm">
+              <i class="fa-solid fa-user-plus"></i>
+              <span>+ Dar de Alta Usuario</span>
+            </button>
+          </div>
         </div>
         <div class="overflow-x-auto">
           <table class="w-full text-left text-sm text-slate-700">
@@ -1150,6 +1163,86 @@
     </div>
   </div>
 
+  <!-- Modal: Dar de Alta Nuevo Operador / Usuario (Web) -->
+  <div id="modal-register-user" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[120] hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-7 space-y-5 shadow-2xl border border-pink-100 animate-in fade-in zoom-in duration-200">
+      <div class="flex justify-between items-start">
+        <div class="flex items-center space-x-3">
+          <div class="w-11 h-11 rounded-2xl bg-pink-100 text-aurani-magenta flex items-center justify-center font-bold text-xl shadow-inner">
+            <i class="fa-solid fa-user-plus"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-black text-slate-900">Dar de Alta Nuevo Usuario</h3>
+            <p class="text-xs text-slate-500">Crear cuenta para App Android y Panel Web</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeRegisterUserModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center text-xs transition cursor-pointer">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form onsubmit="handleRegisterUserSubmit(event)" class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Nombre Completo del Personal</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 text-xs">
+              <i class="fa-solid fa-user"></i>
+            </span>
+            <input type="text" id="reg-user-name" required placeholder="Ej: Juan Pérez Morales" class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:border-aurani-magenta outline-none transition font-medium">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Correo Electrónico</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 text-xs">
+              <i class="fa-solid fa-envelope"></i>
+            </span>
+            <input type="email" id="reg-user-email" required placeholder="juan@aurani.mx" class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:border-aurani-magenta outline-none transition font-medium">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Rol / Puesto en Fábrica</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 text-xs">
+              <i class="fa-solid fa-id-badge"></i>
+            </span>
+            <select id="reg-user-role" class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:border-aurani-magenta outline-none transition font-medium">
+              <option value="OPERADOR">Operador de Planta</option>
+              <option value="Encargada de Almacén">Encargada de Almacén</option>
+              <option value="Supervisor de Calidad">Supervisor de Calidad</option>
+              <option value="Directora General">Directora General</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Contraseña Inicial</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 text-xs">
+              <i class="fa-solid fa-lock"></i>
+            </span>
+            <input type="text" id="reg-user-password" required minlength="4" value="123456" placeholder="Mínimo 4 caracteres" class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:border-aurani-magenta outline-none font-mono font-bold transition">
+          </div>
+          <span class="text-[10px] text-slate-400 mt-1 block">Clave inicial: 123456 (el usuario puede cambiarla luego).</span>
+        </div>
+
+        <div id="reg-user-error" class="hidden text-xs text-rose-600 bg-rose-50 border border-rose-200 rounded-xl p-2.5 text-center font-semibold"></div>
+
+        <div class="flex items-center space-x-2 pt-2">
+          <button type="button" onclick="closeRegisterUserModal()" class="w-1/3 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition cursor-pointer">
+            Cancelar
+          </button>
+          <button type="submit" id="btn-reg-user-submit" class="w-2/3 py-2.5 bg-aurani-magenta hover:bg-pink-700 active:bg-pink-800 text-white font-bold rounded-xl text-xs shadow-md shadow-pink-500/20 transition cursor-pointer flex items-center justify-center space-x-2">
+            <i class="fa-solid fa-check"></i>
+            <span>Guardar y Dar de Alta</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script>
     const isLocalOrFile = window.location.protocol === 'file:' || 
                           window.location.protocol === 'content:' || 
@@ -1817,13 +1910,28 @@
       });
     }
 
-    async function fetchUsers() {
+    async function fetchUsers(btn) {
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-purple-700"></i><span>Cargando...</span>`;
+      }
       try {
-        const res = await fetch(API_BASE + '/api/users');
+        const res = await fetch(API_BASE + '/api/users?t=' + Date.now(), { cache: 'no-store' });
         const data = await res.json();
         const tbody = document.getElementById('users-table-body');
+        const badge = document.getElementById('badge-users-count');
+
+        if (Array.isArray(data)) {
+          if (badge) badge.textContent = data.length;
+        }
+
         if (!tbody) return;
         tbody.innerHTML = '';
+
+        if (!data || data.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-xs text-slate-400 font-bold">No hay usuarios registrados aún.</td></tr>`;
+          return;
+        }
 
         data.forEach(u => {
           const dateStr = u.created_at ? formatLocalDateTime(u.created_at) : 'Reciente';
@@ -1846,6 +1954,79 @@
         });
       } catch (e) {
         console.error('Error fetching users:', e);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = `<i class="fa-solid fa-arrows-rotate text-purple-700"></i><span>Actualizar</span>`;
+        }
+      }
+    }
+
+    function openRegisterUserModal() {
+      document.getElementById('reg-user-name').value = '';
+      document.getElementById('reg-user-email').value = '';
+      document.getElementById('reg-user-password').value = '123456';
+      document.getElementById('reg-user-role').value = 'OPERADOR';
+      document.getElementById('reg-user-error').classList.add('hidden');
+
+      const modal = document.getElementById('modal-register-user');
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    function closeRegisterUserModal() {
+      const modal = document.getElementById('modal-register-user');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    async function handleRegisterUserSubmit(event) {
+      event.preventDefault();
+      const name = document.getElementById('reg-user-name').value.trim();
+      const email = document.getElementById('reg-user-email').value.trim().toLowerCase();
+      const password = document.getElementById('reg-user-password').value.trim();
+      const role = document.getElementById('reg-user-role').value;
+      const btn = document.getElementById('btn-reg-user-submit');
+      const errBox = document.getElementById('reg-user-error');
+
+      errBox.classList.add('hidden');
+
+      if (!name || !email || !password) {
+        errBox.textContent = 'Por favor completa todos los campos';
+        errBox.classList.remove('hidden');
+        return;
+      }
+
+      if (password.length < 4) {
+        errBox.textContent = 'La contraseña debe tener al menos 4 caracteres';
+        errBox.classList.remove('hidden');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>Registrando...</span>`;
+
+      try {
+        const res = await fetch(API_BASE + '/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, password, role })
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+          alert(`¡Usuario "${name}" dado de alta con éxito!\n\nYa puede ingresar con su correo y contraseña desde la App Android o la Web.`);
+          closeRegisterUserModal();
+          await fetchUsers();
+          await fetchAuditLogs();
+        } else {
+          errBox.textContent = data.error || 'No se pudo registrar el usuario';
+          errBox.classList.remove('hidden');
+        }
+      } catch (err) {
+        errBox.textContent = 'Error de conexión: ' + err.message;
+        errBox.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-check"></i> <span>Guardar y Dar de Alta</span>`;
       }
     }
 
@@ -2255,6 +2436,10 @@
           document.getElementById('tab-inventory').classList.add('hidden');
           document.getElementById('tab-ai').classList.toggle('hidden', tabId !== 'tab-ai');
           document.getElementById('tab-audit').classList.toggle('hidden', tabId !== 'tab-audit');
+          if (tabId === 'tab-audit') {
+            fetchAuditLogs();
+            fetchUsers();
+          }
         }
       }
 
