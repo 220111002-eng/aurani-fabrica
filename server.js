@@ -579,6 +579,27 @@ app.put('/api/users/:id/password', (req, res) => {
   });
 });
 
+// Endpoint para dar de baja / eliminar usuario (excepto administradoras)
+app.delete('/api/users/:id', (req, res) => {
+  const userId = req.params.id;
+  const adminName = (req.body?.adminName || req.query?.adminName || 'Ing. Alejandra Alvarado Reyes').trim();
+
+  db.get(`SELECT id, name, email, role FROM users WHERE id = ?`, [userId], (err, user) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+    if (user.email === 'almacen@aurani.mx' || user.email === 'directora@aurani.mx') {
+      return res.status(403).json({ error: 'No se permite eliminar los perfiles de Dirección o Almacén' });
+    }
+
+    db.run(`DELETE FROM users WHERE id = ?`, [userId], function(delErr) {
+      if (delErr) return res.status(500).json({ error: 'Error al eliminar usuario' });
+      logAudit('User', userId, 'BAJA_USUARIO', `Usuario ${user.name} (${user.email}) dado de baja por ${adminName}`, adminName);
+      res.json({ status: 'ok', message: `Usuario ${user.name} dado de baja exitosamente` });
+    });
+  });
+});
+
 // --- ENDPOINTS API REST (Para App Android y Dashboard Web) ---
 
 // 1. Obtener lista de productos (Ideal para RecyclerView en Android)
