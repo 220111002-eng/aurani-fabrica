@@ -446,6 +446,7 @@
                 <th class="px-4 py-3">Correo Electrónico</th>
                 <th class="px-4 py-3">Rol</th>
                 <th class="px-4 py-3">Fecha de Registro</th>
+                <th class="px-4 py-3 text-center">Acciones</th>
               </tr>
             </thead>
             <tbody id="users-table-body" class="divide-y divide-slate-100">
@@ -983,7 +984,12 @@
         </div>
 
         <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">Contraseña</label>
+          <div class="flex justify-between items-center mb-1">
+            <label class="block text-xs font-bold text-slate-700">Contraseña</label>
+            <button type="button" onclick="openSelfRecoverModal()" class="text-[11px] font-bold text-aurani-magenta hover:underline cursor-pointer">
+              ¿Olvidaste tu contraseña?
+            </button>
+          </div>
           <div class="relative">
             <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 text-xs">
               <i class="fa-solid fa-lock"></i>
@@ -998,6 +1004,148 @@
           <i class="fa-solid fa-right-to-bracket"></i>
           <span>Ingresar al Sistema</span>
         </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Restablecer Contraseña por Encargada / Directora (Admin) -->
+  <div id="modal-admin-reset-password" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-[110] hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl border border-purple-200 animate-in fade-in zoom-in duration-200">
+      <div class="flex justify-between items-start">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-lg shadow-inner">
+            <i class="fa-solid fa-key"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-black text-slate-900">Restablecer Contraseña</h3>
+            <p class="text-xs text-slate-500">Gestión de acceso de personal</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeAdminResetPasswordModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center text-xs transition cursor-pointer">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Tarjeta informativa del operador -->
+      <div class="p-3.5 bg-purple-50/70 border border-purple-100 rounded-2xl space-y-1">
+        <div class="text-[11px] font-bold text-purple-900 uppercase tracking-wide">Usuario Seleccionado:</div>
+        <div id="admin-reset-user-name" class="text-sm font-black text-slate-900">Nombre del Usuario</div>
+        <div id="admin-reset-user-email" class="text-xs font-mono text-purple-700">correo@aurani.mx</div>
+      </div>
+
+      <!-- Formulario para asignar nueva clave -->
+      <form onsubmit="handleAdminResetPasswordSubmit(event)" class="space-y-4">
+        <input type="hidden" id="admin-reset-user-id" value="">
+        
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Nueva Contraseña para el Usuario</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 text-xs">
+              <i class="fa-solid fa-lock"></i>
+            </span>
+            <input type="text" id="admin-reset-new-password" required minlength="4" placeholder="Ej: 123456" class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:border-purple-600 outline-none font-mono font-bold text-purple-950 transition">
+          </div>
+        </div>
+
+        <!-- Botones de sugerencia rápida -->
+        <div class="space-y-1.5">
+          <label class="block text-[11px] font-bold text-slate-500">Sugerencias rápidas:</label>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" onclick="setQuickAdminPassword('123456')" class="px-2.5 py-1 bg-slate-100 hover:bg-purple-100 text-slate-700 hover:text-purple-900 border border-slate-200 rounded-lg text-xs font-mono font-bold transition cursor-pointer">
+              123456
+            </button>
+            <button type="button" onclick="setQuickAdminPassword('aurani2026')" class="px-2.5 py-1 bg-slate-100 hover:bg-purple-100 text-slate-700 hover:text-purple-900 border border-slate-200 rounded-lg text-xs font-mono font-bold transition cursor-pointer">
+              aurani2026
+            </button>
+            <button type="button" onclick="setQuickAdminPassword('planta123')" class="px-2.5 py-1 bg-slate-100 hover:bg-purple-100 text-slate-700 hover:text-purple-900 border border-slate-200 rounded-lg text-xs font-mono font-bold transition cursor-pointer">
+              planta123
+            </button>
+          </div>
+        </div>
+
+        <div class="text-[11px] text-slate-500 bg-slate-50 border border-slate-200 rounded-xl p-2.5 flex items-start space-x-2">
+          <i class="fa-solid fa-circle-info text-purple-600 mt-0.5"></i>
+          <span>El cambio surte efecto de inmediato y quedará registrado en el <strong>Historial de Auditoría</strong> a tu nombre.</span>
+        </div>
+
+        <div class="flex items-center space-x-2 pt-2">
+          <button type="button" onclick="closeAdminResetPasswordModal()" class="w-1/3 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition cursor-pointer">
+            Cancelar
+          </button>
+          <button type="submit" id="btn-admin-reset-submit" class="w-2/3 py-2.5 bg-purple-700 hover:bg-purple-800 active:bg-purple-900 text-white font-bold rounded-xl text-xs shadow-md shadow-purple-500/20 transition cursor-pointer flex items-center justify-center space-x-2">
+            <i class="fa-solid fa-check"></i>
+            <span>Confirmar y Cambiar</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Autoservicio para Recuperar Contraseña (Web) -->
+  <div id="modal-self-recover" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[120] hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-7 space-y-5 shadow-2xl border border-pink-100 animate-in fade-in zoom-in duration-200">
+      <div class="flex justify-between items-start">
+        <div class="flex items-center space-x-3">
+          <div class="w-11 h-11 rounded-2xl bg-pink-100 text-aurani-magenta flex items-center justify-center font-bold text-xl shadow-inner">
+            <i class="fa-solid fa-unlock-keyhole"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-black text-slate-900">Recuperar Contraseña</h3>
+            <p class="text-xs text-slate-500">Actualiza tu clave de acceso al instante</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeSelfRecoverModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center text-xs transition cursor-pointer">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <p class="text-xs text-slate-600 leading-relaxed">
+        Ingresa tu correo registrado y define tu nueva contraseña para ingresar de nuevo al sistema:
+      </p>
+
+      <form onsubmit="handleSelfRecoverSubmit(event)" class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Correo Electrónico Registrado</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 text-xs">
+              <i class="fa-solid fa-envelope"></i>
+            </span>
+            <input type="email" id="self-recover-email" required placeholder="tu.correo@aurani.mx" class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:border-aurani-magenta outline-none transition font-medium">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Nueva Contraseña</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 text-xs">
+              <i class="fa-solid fa-lock"></i>
+            </span>
+            <input type="password" id="self-recover-password" required minlength="4" placeholder="Mínimo 4 caracteres" class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:border-aurani-magenta outline-none transition font-medium">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Confirmar Nueva Contraseña</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 text-xs">
+              <i class="fa-solid fa-circle-check"></i>
+            </span>
+            <input type="password" id="self-recover-password-confirm" required minlength="4" placeholder="Repite la contraseña" class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:border-aurani-magenta outline-none transition font-medium">
+          </div>
+        </div>
+
+        <div id="self-recover-error" class="hidden text-xs text-rose-600 bg-rose-50 border border-rose-200 rounded-xl p-2.5 text-center font-semibold"></div>
+        <div id="self-recover-success" class="hidden text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl p-2.5 text-center font-bold"></div>
+
+        <div class="flex items-center space-x-2 pt-2">
+          <button type="button" onclick="closeSelfRecoverModal()" class="w-1/3 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition cursor-pointer">
+            Cancelar
+          </button>
+          <button type="submit" id="btn-self-recover-submit" class="w-2/3 py-2.5 bg-aurani-magenta hover:bg-pink-700 active:bg-pink-800 text-white font-bold rounded-xl text-xs shadow-md shadow-pink-500/20 transition cursor-pointer flex items-center justify-center space-x-2">
+            <i class="fa-solid fa-key"></i>
+            <span>Reestablecer Clave</span>
+          </button>
+        </div>
       </form>
     </div>
   </div>
@@ -1145,6 +1293,149 @@
         localStorage.removeItem('aurani_user');
         currentAuthUser = null;
         showLoginModal();
+      }
+    }
+
+    // --- GESTIÓN DE RESTABLECIMIENTO DE CONTRASEÑAS (OPCIÓN 1 & OPCIÓN 2) ---
+
+    // 1. Funciones de Administrador (Directora Aura Ilse / Encargada de Almacén Alejandra)
+    function openAdminResetPasswordModal(userId, userName, userEmail) {
+      document.getElementById('admin-reset-user-id').value = userId;
+      document.getElementById('admin-reset-user-name').textContent = userName || 'Usuario';
+      document.getElementById('admin-reset-user-email').textContent = userEmail || '';
+      document.getElementById('admin-reset-new-password').value = '123456';
+      
+      const modal = document.getElementById('modal-admin-reset-password');
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    function closeAdminResetPasswordModal() {
+      const modal = document.getElementById('modal-admin-reset-password');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    function setQuickAdminPassword(val) {
+      const input = document.getElementById('admin-reset-new-password');
+      if (input) {
+        input.value = val;
+        input.focus();
+      }
+    }
+
+    async function handleAdminResetPasswordSubmit(event) {
+      event.preventDefault();
+      const userId = document.getElementById('admin-reset-user-id').value;
+      const newPassword = document.getElementById('admin-reset-new-password').value.trim();
+      const userName = document.getElementById('admin-reset-user-name').textContent;
+      const btn = document.getElementById('btn-admin-reset-submit');
+
+      if (!newPassword || newPassword.length < 4) {
+        alert('La contraseña debe tener al menos 4 caracteres');
+        return;
+      }
+
+      const adminWho = (currentAuthUser && currentAuthUser.name) ? currentAuthUser.name : 'Ing. Alejandra Alvarado Reyes';
+
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>Actualizando...</span>`;
+
+      try {
+        const res = await fetch(API_BASE + `/api/users/${userId}/password`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ newPassword, adminName: adminWho })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          alert(`¡Éxito! La contraseña de ${userName} ha sido restablecida a "${newPassword}".\n\nEl cambio ya está activo tanto en la App Android como en la Web.`);
+          closeAdminResetPasswordModal();
+          await fetchUsers();
+          await fetchAuditLogs();
+        } else {
+          alert('Error: ' + (data.error || 'No se pudo actualizar la contraseña'));
+        }
+      } catch (err) {
+        alert('Error al conectar con el servidor: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-check"></i> <span>Confirmar y Cambiar</span>`;
+      }
+    }
+
+    // 2. Funciones de Autoservicio (Operador en el Login Web)
+    function openSelfRecoverModal() {
+      const loginEmail = document.getElementById('login-email').value.trim();
+      document.getElementById('self-recover-email').value = loginEmail;
+      document.getElementById('self-recover-password').value = '';
+      document.getElementById('self-recover-password-confirm').value = '';
+      document.getElementById('self-recover-error').classList.add('hidden');
+      document.getElementById('self-recover-success').classList.add('hidden');
+
+      const modal = document.getElementById('modal-self-recover');
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    function closeSelfRecoverModal() {
+      const modal = document.getElementById('modal-self-recover');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    async function handleSelfRecoverSubmit(event) {
+      event.preventDefault();
+      const email = document.getElementById('self-recover-email').value.trim().toLowerCase();
+      const pass = document.getElementById('self-recover-password').value.trim();
+      const confirmPass = document.getElementById('self-recover-password-confirm').value.trim();
+      const btn = document.getElementById('btn-self-recover-submit');
+      const errBox = document.getElementById('self-recover-error');
+      const succBox = document.getElementById('self-recover-success');
+
+      errBox.classList.add('hidden');
+      succBox.classList.add('hidden');
+
+      if (pass.length < 4) {
+        errBox.textContent = 'La nueva contraseña debe tener al menos 4 caracteres';
+        errBox.classList.remove('hidden');
+        return;
+      }
+
+      if (pass !== confirmPass) {
+        errBox.textContent = 'Las contraseñas no coinciden. Por favor verifícalas.';
+        errBox.classList.remove('hidden');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>Guardando...</span>`;
+
+      try {
+        const res = await fetch(API_BASE + '/api/auth/recover-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, newPassword: pass })
+        });
+        const data = await res.json();
+
+        if (res.ok && data.status === 'ok') {
+          succBox.textContent = '¡Contraseña actualizada exitosamente! Regresando al login...';
+          succBox.classList.remove('hidden');
+
+          setTimeout(() => {
+            closeSelfRecoverModal();
+            // Llenar datos en el formulario de login principal
+            document.getElementById('login-email').value = email;
+            document.getElementById('login-password').value = pass;
+            showLoginModal();
+          }, 1500);
+        } else {
+          errBox.textContent = data.error || 'El correo ingresado no está registrado en el sistema.';
+          errBox.classList.remove('hidden');
+        }
+      } catch (err) {
+        errBox.textContent = 'Error de conexión con el servidor: ' + err.message;
+        errBox.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-key"></i> <span>Reestablecer Clave</span>`;
       }
     }
 
@@ -1543,6 +1834,13 @@
               <td class="px-4 py-2.5 font-mono text-aurani-magenta font-semibold">${u.email}</td>
               <td class="px-4 py-2.5"><span class="px-2 py-0.5 rounded bg-emerald-100 font-mono text-emerald-800 font-bold">${u.role || 'OPERADOR'}</span></td>
               <td class="px-4 py-2.5 text-slate-500">${dateStr}</td>
+              <td class="px-4 py-2.5 text-center">
+                <button onclick="openAdminResetPasswordModal(${u.id}, '${u.name.replace(/'/g, "\\'")}', '${u.email}')" 
+                        class="px-2.5 py-1 bg-purple-50 hover:bg-purple-100 active:bg-purple-200 text-purple-900 border border-purple-200 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 mx-auto cursor-pointer shadow-xs">
+                  <i class="fa-solid fa-key text-[10px] text-purple-600"></i>
+                  <span>Cambiar Clave</span>
+                </button>
+              </td>
             </tr>
           `;
         });
