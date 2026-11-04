@@ -552,6 +552,7 @@ function isAuthorizedManagerName(nameOrEmail) {
   return (
     s === 'almacen@aurani.mx' ||
     s === 'directora@aurani.mx' ||
+    s === 'aicamargo@grupoaurani.com' ||
     s.includes('alejandra') ||
     s.includes('aura') ||
     s.includes('directora') ||
