@@ -1017,6 +1017,16 @@
           <i class="fa-solid fa-right-to-bracket"></i>
           <span>Ingresar al Sistema</span>
         </button>
+
+        <!-- Registro de Nuevo Operador (Autoservicio) -->
+        <div class="pt-3 text-center border-t border-slate-100">
+          <p class="text-xs text-slate-500">
+            ¿Eres nuevo operador y no tienes cuenta?
+            <button type="button" onclick="openRegisterUserModal(true)" class="font-bold text-aurani-magenta hover:underline ml-1 cursor-pointer">
+              Regístrate aquí
+            </button>
+          </p>
+        </div>
       </form>
     </div>
   </div>
@@ -1172,8 +1182,8 @@
             <i class="fa-solid fa-user-plus"></i>
           </div>
           <div>
-            <h3 class="text-base font-black text-slate-900">Dar de Alta Nuevo Usuario</h3>
-            <p class="text-xs text-slate-500">Crear cuenta para App Android y Panel Web</p>
+            <h3 id="modal-reg-title" class="text-base font-black text-slate-900">Dar de Alta Nuevo Usuario</h3>
+            <p id="modal-reg-subtitle" class="text-xs text-slate-500">Crear cuenta para App Android y Panel Web</p>
           </div>
         </div>
         <button type="button" onclick="closeRegisterUserModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center text-xs transition cursor-pointer">
@@ -1209,7 +1219,7 @@
               <i class="fa-solid fa-id-badge"></i>
             </span>
             <select id="reg-user-role" class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:border-aurani-magenta outline-none transition font-medium">
-              <option value="OPERADOR">Operador de Planta</option>
+              <option value="OPERADOR" selected>Operador de Planta</option>
               <option value="Encargada de Almacén">Encargada de Almacén</option>
               <option value="Supervisor de Calidad">Supervisor de Calidad</option>
               <option value="Directora General">Directora General</option>
@@ -1218,14 +1228,14 @@
         </div>
 
         <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">Contraseña Inicial</label>
+          <label id="modal-reg-pass-label" class="block text-xs font-bold text-slate-700 mb-1">Contraseña Inicial</label>
           <div class="relative">
             <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 text-xs">
               <i class="fa-solid fa-lock"></i>
             </span>
-            <input type="text" id="reg-user-password" required minlength="4" value="123456" placeholder="Mínimo 4 caracteres" class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:border-aurani-magenta outline-none font-mono font-bold transition">
+            <input type="password" id="reg-user-password" required minlength="4" value="123456" placeholder="Mínimo 4 caracteres" class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:border-aurani-magenta outline-none font-medium transition">
           </div>
-          <span class="text-[10px] text-slate-400 mt-1 block">Clave inicial: 123456 (el usuario puede cambiarla luego).</span>
+          <span id="modal-reg-pass-hint" class="text-[10px] text-slate-400 mt-1 block">Clave inicial: 123456 (el usuario puede cambiarla luego).</span>
         </div>
 
         <div id="reg-user-error" class="hidden text-xs text-rose-600 bg-rose-50 border border-rose-200 rounded-xl p-2.5 text-center font-semibold"></div>
@@ -1236,7 +1246,7 @@
           </button>
           <button type="submit" id="btn-reg-user-submit" class="w-2/3 py-2.5 bg-aurani-magenta hover:bg-pink-700 active:bg-pink-800 text-white font-bold rounded-xl text-xs shadow-md shadow-pink-500/20 transition cursor-pointer flex items-center justify-center space-x-2">
             <i class="fa-solid fa-check"></i>
-            <span>Guardar y Dar de Alta</span>
+            <span id="btn-reg-user-text">Guardar y Dar de Alta</span>
           </button>
         </div>
       </form>
@@ -1999,12 +2009,43 @@
       }
     }
 
-    function openRegisterUserModal() {
+    let isPublicRegistration = false;
+
+    function openRegisterUserModal(isPublic = false) {
+      isPublicRegistration = isPublic;
       document.getElementById('reg-user-name').value = '';
       document.getElementById('reg-user-email').value = '';
-      document.getElementById('reg-user-password').value = '123456';
       document.getElementById('reg-user-role').value = 'OPERADOR';
       document.getElementById('reg-user-error').classList.add('hidden');
+
+      const titleEl = document.getElementById('modal-reg-title');
+      const subtitleEl = document.getElementById('modal-reg-subtitle');
+      const passLabel = document.getElementById('modal-reg-pass-label');
+      const passInput = document.getElementById('reg-user-password');
+      const passHint = document.getElementById('modal-reg-pass-hint');
+      const btnText = document.getElementById('btn-reg-user-text');
+
+      if (isPublic) {
+        if (titleEl) titleEl.textContent = 'Crear Cuenta de Operador';
+        if (subtitleEl) subtitleEl.textContent = 'Regístrate para acceder desde la App Android y el Panel Web';
+        if (passLabel) passLabel.textContent = 'Crea tu Contraseña';
+        if (passInput) {
+          passInput.value = '';
+          passInput.placeholder = 'Mínimo 4 caracteres';
+        }
+        if (passHint) passHint.textContent = 'Esta clave te servirá para ingresar en tu teléfono y en esta computadora.';
+        if (btnText) btnText.textContent = 'Crear Cuenta e Ingresar';
+      } else {
+        if (titleEl) titleEl.textContent = 'Dar de Alta Nuevo Usuario';
+        if (subtitleEl) subtitleEl.textContent = 'Crear cuenta para App Android y Panel Web';
+        if (passLabel) passLabel.textContent = 'Contraseña Inicial';
+        if (passInput) {
+          passInput.value = '123456';
+          passInput.placeholder = 'Mínimo 4 caracteres';
+        }
+        if (passHint) passHint.textContent = 'Clave inicial: 123456 (el usuario puede cambiarla luego).';
+        if (btnText) btnText.textContent = 'Guardar y Dar de Alta';
+      }
 
       const modal = document.getElementById('modal-register-user');
       if (modal) modal.classList.remove('hidden');
@@ -2013,6 +2054,9 @@
     function closeRegisterUserModal() {
       const modal = document.getElementById('modal-register-user');
       if (modal) modal.classList.add('hidden');
+      if (!currentAuthUser) {
+        showLoginModal();
+      }
     }
 
     async function handleRegisterUserSubmit(event) {
@@ -2023,6 +2067,7 @@
       const role = document.getElementById('reg-user-role').value;
       const btn = document.getElementById('btn-reg-user-submit');
       const errBox = document.getElementById('reg-user-error');
+      const btnText = document.getElementById('btn-reg-user-text');
 
       errBox.classList.add('hidden');
 
@@ -2045,15 +2090,21 @@
         const res = await fetch(API_BASE + '/api/auth/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, email, password, role })
+          body: JSON.stringify({ name, email, password, role, origin: isPublicRegistration ? 'Panel Web (Autoservicio)' : 'Panel Web (Administrador)' })
         });
         const data = await res.json();
 
         if (res.ok) {
-          alert(`¡Usuario "${name}" dado de alta con éxito!\n\nYa puede ingresar con su correo y contraseña desde la App Android o la Web.`);
           closeRegisterUserModal();
-          await fetchUsers();
-          await fetchAuditLogs();
+          if (isPublicRegistration || !currentAuthUser) {
+            // Auto login para el nuevo operador registrado
+            applyAuthenticatedUser({ id: data.id, name, email, role });
+            alert(`¡Bienvenido a Aurani Fábrica, ${name}!\nTu cuenta ha sido creada y ya has ingresado al sistema.\nPuedes usar este mismo correo y contraseña en la App Android.`);
+          } else {
+            alert(`¡Usuario "${name}" dado de alta con éxito!\n\nYa puede ingresar con su correo y contraseña desde la App Android o la Web.`);
+            await fetchUsers();
+            await fetchAuditLogs();
+          }
         } else {
           errBox.textContent = data.error || 'No se pudo registrar el usuario';
           errBox.classList.remove('hidden');
@@ -2063,7 +2114,7 @@
         errBox.classList.remove('hidden');
       } finally {
         btn.disabled = false;
-        btn.innerHTML = `<i class="fa-solid fa-check"></i> <span>Guardar y Dar de Alta</span>`;
+        btn.innerHTML = `<i class="fa-solid fa-check"></i> <span id="btn-reg-user-text">${isPublicRegistration ? 'Crear Cuenta e Ingresar' : 'Guardar y Dar de Alta'}</span>`;
       }
     }
 

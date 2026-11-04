@@ -446,7 +446,8 @@ app.post('/api/auth/register', (req, res) => {
     [name, email, hashedPassword, role],
     function(err) {
       if (err) return res.status(400).json({ error: 'El correo electrónico ya está registrado' });
-      logAudit('User', this.lastID, 'REGISTRO', `Nuevo usuario registrado desde App Android: ${name} (${email})`, name);
+      const origin = req.body.origin || (req.headers['user-agent'] && req.headers['user-agent'].includes('Mozilla') ? 'Panel Web' : 'App Android');
+      logAudit('User', this.lastID, 'REGISTRO', `Nuevo usuario registrado desde ${origin}: ${name} (${email})`, name);
       res.status(201).json({ id: this.lastID, name, email, role, message: 'Usuario registrado exitosamente' });
     }
   );
