@@ -1026,37 +1026,58 @@
 
   <!-- Modal de Inicio de Sesión / Identificación de Operador -->
   <div id="modal-login" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[100] hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-md w-full p-7 space-y-6 shadow-2xl border border-pink-100 animate-in fade-in zoom-in duration-200">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 space-y-5 shadow-2xl border border-pink-100 animate-in fade-in zoom-in duration-200 max-h-[92vh] overflow-y-auto">
       <div class="text-center space-y-2">
         <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-pink-100 text-aurani-magenta mb-1 shadow-inner">
           <i class="fa-solid fa-industry text-2xl"></i>
         </div>
         <h2 class="text-xl font-black text-slate-900 tracking-tight">Aurani Fábrica</h2>
-        <p class="text-xs text-slate-500">Inicia sesión o selecciona tu perfil para que todos los movimientos queden registrados a tu nombre en el Historial de Planta.</p>
+        <p class="text-xs text-slate-500">Inicia sesión o selecciona tu perfil institucional para acceder al sistema.</p>
       </div>
 
-      <!-- Perfiles Institucionales Protegidos -->
+      <!-- Aviso Claro de Clave Inicial -->
+      <div class="p-3 bg-purple-50 border border-purple-200 rounded-2xl flex items-center space-x-3 text-xs text-purple-950 shadow-xs">
+        <div class="w-8 h-8 rounded-xl bg-purple-200/80 flex items-center justify-center shrink-0 text-purple-800 font-bold">
+          <i class="fa-solid fa-key text-xs"></i>
+        </div>
+        <div class="leading-tight">
+          <div class="font-bold text-slate-800">Clave de acceso inicial: <span class="font-mono bg-white px-2 py-0.5 rounded border border-purple-300 font-black text-aurani-magenta text-xs">123</span></div>
+          <div class="text-[11px] text-slate-500 mt-0.5">Usa el botón directo para entrar con 1 clic o escribe tus datos.</div>
+        </div>
+      </div>
+
+      <!-- Perfiles Institucionales Protegidos con 1-Clic -->
       <div class="space-y-2">
         <div class="flex justify-between items-center">
-          <label class="block text-[11px] font-black text-slate-400 uppercase tracking-wider">Perfiles Institucionales (Requieren Clave)</label>
-          <span class="text-[10px] font-bold text-rose-500 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200"><i class="fa-solid fa-lock mr-1"></i>Acceso Protegido</span>
+          <label class="block text-[11px] font-black text-slate-400 uppercase tracking-wider">Perfiles Institucionales</label>
+          <span class="text-[10px] font-bold text-rose-500 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200"><i class="fa-solid fa-lock mr-1"></i>Acceso Seguro</span>
         </div>
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           <!-- Directora General -->
-          <button type="button" onclick="selectProfile('Aura Ilse Camargo Flores', 'directora@aurani.mx', 'Directora General')" class="p-3.5 bg-pink-50/70 hover:bg-pink-100 border border-pink-200 rounded-2xl flex flex-col items-start transition cursor-pointer text-left group shadow-xs">
-            <span class="text-xs font-black text-aurani-magenta flex items-center gap-1.5 leading-snug">
-              <i class="fa-solid fa-crown text-xs text-amber-500"></i> Aura Ilse Camargo Flores
-            </span>
-            <span class="text-[10px] text-pink-700 font-semibold mt-1">Directora General</span>
-          </button>
+          <div class="p-3.5 bg-pink-50/70 hover:bg-pink-100/90 border border-pink-200 rounded-2xl flex flex-col justify-between transition shadow-xs">
+            <div class="cursor-pointer" onclick="selectProfile('Aura Ilse Camargo Flores', 'directora@aurani.mx', 'Directora General')">
+              <span class="text-xs font-black text-aurani-magenta flex items-center gap-1.5 leading-snug">
+                <i class="fa-solid fa-crown text-xs text-amber-500"></i> Aura Ilse Camargo
+              </span>
+              <span class="text-[10px] text-pink-700 font-semibold block mt-0.5">Directora General</span>
+            </div>
+            <button type="button" onclick="quickLoginWithPassword('directora@aurani.mx', '123')" class="mt-2.5 w-full py-1.5 px-2 bg-aurani-magenta hover:bg-pink-700 active:scale-95 text-white rounded-xl text-[11px] font-bold text-center transition cursor-pointer shadow-xs flex items-center justify-center gap-1.5">
+              <i class="fa-solid fa-right-to-bracket text-[10px]"></i> Entrar (Clave 123)
+            </button>
+          </div>
 
           <!-- Encargada de Almacén -->
-          <button type="button" onclick="selectProfile('Ing. Alejandra Alvarado Reyes', 'almacen@aurani.mx', 'Encargada de Almacén')" class="p-3.5 bg-slate-50 hover:bg-purple-50 border border-slate-200 rounded-2xl flex flex-col items-start transition cursor-pointer text-left group shadow-xs">
-            <span class="text-xs font-black text-slate-900 group-hover:text-purple-700 flex items-center gap-1.5 leading-snug">
-              <i class="fa-solid fa-boxes-stacked text-xs text-purple-600"></i> Ing. Alejandra Alvarado Reyes
-            </span>
-            <span class="text-[10px] text-slate-500 font-semibold mt-1">Encargada de Almacén</span>
-          </button>
+          <div class="p-3.5 bg-slate-50 hover:bg-purple-50/80 border border-slate-200 rounded-2xl flex flex-col justify-between transition shadow-xs">
+            <div class="cursor-pointer" onclick="selectProfile('Ing. Alejandra Alvarado Reyes', 'almacen@aurani.mx', 'Encargada de Almacén')">
+              <span class="text-xs font-black text-slate-900 flex items-center gap-1.5 leading-snug">
+                <i class="fa-solid fa-boxes-stacked text-xs text-purple-600"></i> Alejandra Alvarado
+              </span>
+              <span class="text-[10px] text-purple-700 font-semibold block mt-0.5">Encargada de Almacén</span>
+            </div>
+            <button type="button" onclick="quickLoginWithPassword('almacen@aurani.mx', '123')" class="mt-2.5 w-full py-1.5 px-2 bg-purple-800 hover:bg-purple-900 active:scale-95 text-white rounded-xl text-[11px] font-bold text-center transition cursor-pointer shadow-xs flex items-center justify-center gap-1.5">
+              <i class="fa-solid fa-right-to-bracket text-[10px]"></i> Entrar (Clave 123)
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1080,7 +1101,7 @@
 
         <div>
           <div class="flex justify-between items-center mb-1">
-            <label class="block text-xs font-bold text-slate-700">Contraseña</label>
+            <label class="block text-xs font-bold text-slate-700">Contraseña <span class="text-[11px] text-purple-700 font-normal">(Inicial: 123)</span></label>
             <button type="button" onclick="openSelfRecoverModal()" class="text-[11px] font-bold text-aurani-magenta hover:underline cursor-pointer">
               ¿Olvidaste tu contraseña?
             </button>
@@ -1089,7 +1110,10 @@
             <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 text-xs">
               <i class="fa-solid fa-lock"></i>
             </span>
-            <input type="password" id="login-password" required placeholder="••••••••" class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:border-aurani-magenta outline-none transition font-medium">
+            <input type="password" id="login-password" required placeholder="••••••••" class="w-full pl-9 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:border-aurani-magenta outline-none transition font-medium">
+            <button type="button" onclick="togglePasswordVisibility('login-password', this)" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer" title="Mostrar/Ocultar contraseña">
+              <i class="fa-solid fa-eye text-xs"></i>
+            </button>
           </div>
         </div>
 
@@ -1500,14 +1524,34 @@
       const passInput = document.getElementById('login-password');
       const errBox = document.getElementById('login-error');
       if (emailInput) emailInput.value = email;
+      if (passInput) passInput.value = '123';
       if (errBox) {
-        errBox.innerHTML = `<i class="fa-solid fa-shield-halved text-purple-700 mr-1.5"></i> Cuenta institucional de <b>${name}</b> seleccionada. Introduce tu contraseña para acceder.`;
-        errBox.className = "text-xs text-purple-900 bg-purple-50 border border-purple-200 rounded-xl p-2.5 text-center font-semibold";
+        errBox.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-600 mr-1.5"></i> Cuenta de <b>${name}</b> seleccionada con clave inicial (<span class="font-mono font-bold">123</span>). Haz clic en <b>Ingresar al Sistema</b> o pulsa el botón directo.`;
+        errBox.className = "text-xs text-emerald-900 bg-emerald-50 border border-emerald-200 rounded-xl p-2.5 text-center font-semibold";
         errBox.classList.remove('hidden');
       }
-      if (passInput) {
-        passInput.value = '';
-        passInput.focus();
+      if (passInput) passInput.focus();
+    }
+
+    async function quickLoginWithPassword(email, password) {
+      const emailInput = document.getElementById('login-email');
+      const passInput = document.getElementById('login-password');
+      if (emailInput) emailInput.value = email;
+      if (passInput) passInput.value = password;
+      const fakeEvent = { preventDefault: () => {} };
+      await handleLoginSubmit(fakeEvent);
+    }
+
+    function togglePasswordVisibility(inputId, btn) {
+      const input = document.getElementById(inputId);
+      if (!input) return;
+      const icon = btn.querySelector('i');
+      if (input.type === 'password') {
+        input.type = 'text';
+        if (icon) icon.className = 'fa-solid fa-eye-slash text-xs text-aurani-magenta';
+      } else {
+        input.type = 'password';
+        if (icon) icon.className = 'fa-solid fa-eye text-xs text-slate-400';
       }
     }
 
@@ -2851,6 +2895,9 @@
       const tbody = document.getElementById('odoo-orders-table-body');
       if (!tbody) return;
 
+      const subBadgeOrders = document.getElementById('badge-odoo-sub-orders');
+      if (subBadgeOrders) subBadgeOrders.innerText = odooOrders ? odooOrders.length : 0;
+
       if (!odooOrders || odooOrders.length === 0) {
         tbody.innerHTML = `
           <tr>
@@ -2924,7 +2971,6 @@
 
       tbody.innerHTML = html;
 
-      const subBadgeOrders = document.getElementById('badge-odoo-sub-orders');
       if (subBadgeOrders) {
         subBadgeOrders.innerText = odooOrders.length;
       }
