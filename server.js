@@ -103,57 +103,24 @@ db.serialize(() => {
   db.run("ALTER TABLE products ADD COLUMN batch_number TEXT DEFAULT ''", () => {});
   db.run("ALTER TABLE products ADD COLUMN unit_of_measure TEXT DEFAULT ''", () => {});
 
-  // Auto-cargar catálogo de Empaque (Zona 16) y Muestras si la base de datos no los tiene aún
-  db.get(`SELECT COUNT(*) as count FROM products WHERE category LIKE '%Empaque%' OR category LIKE '%Muestra%'`, (err, row) => {
-    if (!row || row.count === 0) {
-      console.log("🌱 Cargando catálogo inicial de Material de Empaque y Muestras...");
-      
-      const initialProducts = [
-        { sku: "EMP-001", name: "Granola proteica frutos secos", category: "Material de Empaque y Embalaje", unlotified_stock: 600, lotified_stock: 0, stock_quantity: 600, min_stock: 1000, unit_price: 15.00 },
-        { sku: "EMP-002", name: "Granola proteica cocoa (Moradas)", category: "Material de Empaque y Embalaje", unlotified_stock: 750, lotified_stock: 0, stock_quantity: 750, min_stock: 1000, unit_price: 15.00 },
-        { sku: "EMP-003", name: "Granola proteica Cocoa (Rosas)", category: "Material de Empaque y Embalaje", unlotified_stock: 0, lotified_stock: 0, stock_quantity: 0, min_stock: 1000, unit_price: 15.00 },
-        { sku: "EMP-004", name: "Rebel HC proteicos", category: "Material de Empaque y Embalaje", unlotified_stock: 3000, lotified_stock: 0, stock_quantity: 3000, min_stock: 1000, unit_price: 12.00 },
-        { sku: "EMP-005", name: "HC Original", category: "Material de Empaque y Embalaje", unlotified_stock: 1200, lotified_stock: 0, stock_quantity: 1200, min_stock: 6000, unit_price: 12.00 },
-        { sku: "EMP-006", name: "HC Matcha", category: "Material de Empaque y Embalaje", unlotified_stock: 0, lotified_stock: 0, stock_quantity: 0, min_stock: 4500, unit_price: 12.00 },
-        { sku: "EMP-007", name: "HC Golden Milk", category: "Material de Empaque y Embalaje", unlotified_stock: 2500, lotified_stock: 2500, stock_quantity: 5000, min_stock: 4000, unit_price: 12.00 },
-        { sku: "EMP-008", name: "Mango 40g", category: "Material de Empaque y Embalaje", unlotified_stock: 99990, lotified_stock: 0, stock_quantity: 99990, min_stock: 10000, unit_price: 8.50 },
-        { sku: "EMP-009", name: "Piña 40g", category: "Material de Empaque y Embalaje", unlotified_stock: 79990, lotified_stock: 0, stock_quantity: 79990, min_stock: 10000, unit_price: 8.50 },
-        { sku: "EMP-010", name: "Mango natural 90g", category: "Material de Empaque y Embalaje", unlotified_stock: 179, lotified_stock: 0, stock_quantity: 179, min_stock: 500, unit_price: 14.00 },
-        { sku: "EMP-011", name: "Mango enchilado 90g", category: "Material de Empaque y Embalaje", unlotified_stock: 3000, lotified_stock: 0, stock_quantity: 3000, min_stock: 2000, unit_price: 14.00 },
-        { sku: "EMP-012", name: "Piña Natural", category: "Material de Empaque y Embalaje", unlotified_stock: 2250, lotified_stock: 920, stock_quantity: 3170, min_stock: 2000, unit_price: 14.00 },
-        { sku: "EMP-013", name: "Piña enchilada", category: "Material de Empaque y Embalaje", unlotified_stock: 0, lotified_stock: 0, stock_quantity: 0, min_stock: 2000, unit_price: 14.00 },
-        { sku: "EMP-014", name: "TMA", category: "Material de Empaque y Embalaje", unlotified_stock: 1850, lotified_stock: 0, stock_quantity: 1850, min_stock: 500, unit_price: 10.00 },
-        { sku: "EMP-015", name: "TMO", category: "Material de Empaque y Embalaje", unlotified_stock: 1560, lotified_stock: 0, stock_quantity: 1560, min_stock: 1000, unit_price: 10.00 },
-        { sku: "EMP-016", name: "TMP", category: "Material de Empaque y Embalaje", unlotified_stock: 2800, lotified_stock: 0, stock_quantity: 2800, min_stock: 500, unit_price: 10.00 },
-        { sku: "EMP-017", name: "Jugo verde", category: "Material de Empaque y Embalaje", unlotified_stock: 0, lotified_stock: 0, stock_quantity: 0, min_stock: 1000, unit_price: 12.00 },
-        { sku: "EMP-018", name: "Golden Milk", category: "Material de Empaque y Embalaje", unlotified_stock: 900, lotified_stock: 0, stock_quantity: 900, min_stock: 1000, unit_price: 12.00 },
-        { sku: "EMP-019", name: "Caja Grande", category: "Material de Empaque y Embalaje", unlotified_stock: 1000, lotified_stock: 0, stock_quantity: 1000, min_stock: 200, unit_price: 25.00 },
-        { sku: "EMP-020", name: "Caja 3 bolsas", category: "Material de Empaque y Embalaje", unlotified_stock: 400, lotified_stock: 0, stock_quantity: 400, min_stock: 100, unit_price: 18.00 },
-        { sku: "EMP-021", name: "Caja bonsai 40g", category: "Material de Empaque y Embalaje", unlotified_stock: 1900, lotified_stock: 0, stock_quantity: 1900, min_stock: 300, unit_price: 15.00 },
-        { sku: "EMP-022", name: "Caja bonsai 90g", category: "Material de Empaque y Embalaje", unlotified_stock: 8400, lotified_stock: 0, stock_quantity: 8400, min_stock: 300, unit_price: 18.00 },
-        { sku: "EMP-023", name: "Caja Hot Cakes", category: "Material de Empaque y Embalaje", unlotified_stock: 0, lotified_stock: 0, stock_quantity: 0, min_stock: 400, unit_price: 20.00 },
-        { sku: "EMP-024", name: "Caja KHUMARA", category: "Material de Empaque y Embalaje", unlotified_stock: 1350, lotified_stock: 0, stock_quantity: 1350, min_stock: 300, unit_price: 22.00 },
-        { sku: "EMP-025", name: "Trail mix omega 35 g", category: "Material de Empaque y Embalaje", unlotified_stock: 32990, lotified_stock: 0, stock_quantity: 32990, min_stock: 5000, unit_price: 7.50 },
-        { sku: "EMP-026", name: "Trail mix proteina 35 g", category: "Material de Empaque y Embalaje", unlotified_stock: 32990, lotified_stock: 0, stock_quantity: 32990, min_stock: 5000, unit_price: 7.50 },
-        { sku: "EMP-027", name: "Trail mix antioxidante 35 g", category: "Material de Empaque y Embalaje", unlotified_stock: 32990, lotified_stock: 0, stock_quantity: 32990, min_stock: 5000, unit_price: 7.50 },
-        { sku: "EMP-028", name: "Volta canela Manzana", category: "Material de Empaque y Embalaje", unlotified_stock: 622, lotified_stock: 0, stock_quantity: 622, min_stock: 200, unit_price: 10.00 },
-        { sku: "EMP-029", name: "Volta Pistache", category: "Material de Empaque y Embalaje", unlotified_stock: 650, lotified_stock: 0, stock_quantity: 650, min_stock: 200, unit_price: 10.00 },
-        { sku: "EMP-030", name: "HC cocoa", category: "Material de Empaque y Embalaje", unlotified_stock: 20500, lotified_stock: 1500, stock_quantity: 22000, min_stock: 6000, unit_price: 12.00 },
-        { sku: "EMP-031", name: "Malteada de grillo", category: "Material de Empaque y Embalaje", unlotified_stock: 0, lotified_stock: 0, stock_quantity: 0, min_stock: 500, unit_price: 15.00 },
-        { sku: "EMP-032", name: "DISPLAY Pistache", category: "Material de Empaque y Embalaje", unlotified_stock: 19, lotified_stock: 0, stock_quantity: 19, min_stock: 10, unit_price: 35.00 },
-        { sku: "EMP-033", name: "DISPLAY Manzana canela", category: "Material de Empaque y Embalaje", unlotified_stock: 38, lotified_stock: 0, stock_quantity: 38, min_stock: 10, unit_price: 35.00 },
-        { sku: "EMP-034", name: "Bolsa Stand up", category: "Material de Empaque y Embalaje", unlotified_stock: 60, lotified_stock: 8, stock_quantity: 68, min_stock: 50, unit_price: 5.00 },
-        { sku: "EMP-035", name: "Cintas", category: "Material de Empaque y Embalaje", unlotified_stock: 36, lotified_stock: 0, stock_quantity: 36, min_stock: 20, unit_price: 45.00 },
-        { sku: "EMP-036", name: "Protein Bites Peanut B & J", category: "Material de Empaque y Embalaje", unlotified_stock: 95, lotified_stock: 0, stock_quantity: 95, min_stock: 100, unit_price: 12.00 },
-        { sku: "MUE-001", name: "Muestra Granola Proteica 50g", category: "Muestras", unlotified_stock: 25, lotified_stock: 0, stock_quantity: 25, min_stock: 10, unit_price: 8.00 },
-        { sku: "MUE-002", name: "Muestra Proteína Vegetal Vainilla 30g", category: "Muestras", unlotified_stock: 40, lotified_stock: 0, stock_quantity: 40, min_stock: 10, unit_price: 10.00 }
-      ];
-
-      const stmt = db.prepare(`INSERT OR IGNORE INTO products (sku, name, category, unlotified_stock, lotified_stock, stock_quantity, min_stock, unit_price) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);
-      initialProducts.forEach(p => {
-        stmt.run([p.sku, p.name, p.category, p.unlotified_stock, p.lotified_stock, p.stock_quantity, p.min_stock, p.unit_price]);
-      });
-      stmt.finalize();
+  // Auto-cargar catálogo oficial Aurani si la base de datos tiene menos de 100 productos
+  const seedFile = path.join(__dirname, 'official_products_seed.json');
+  db.get(`SELECT COUNT(*) as count FROM products`, (err, row) => {
+    if (!row || row.count < 100) {
+      if (fs.existsSync(seedFile)) {
+        console.log("🌱 Cargando catálogo oficial Aurani desde official_products_seed.json (421 insumos)...");
+        try {
+          const seedProducts = JSON.parse(fs.readFileSync(seedFile, 'utf8'));
+          const stmt = db.prepare(`INSERT OR REPLACE INTO products (sku, name, category, stock_quantity, unlotified_stock, lotified_stock, min_stock, unit_price, expiration_date, supplier_name, batch_number, unit_of_measure) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+          seedProducts.forEach(p => {
+            stmt.run([p.sku, p.name, p.category, p.stock_quantity, p.unlotified_stock, p.lotified_stock, p.min_stock, p.unit_price, p.expiration_date || '', p.supplier_name || '', p.batch_number || '', p.unit_of_measure || '']);
+          });
+          stmt.finalize();
+          console.log(`✅ ${seedProducts.length} insumos cargados exitosamente.`);
+        } catch (e) {
+          console.error("Error al cargar seed oficial:", e.message);
+        }
+      }
     }
   });
 
@@ -957,6 +924,25 @@ app.post('/api/alerts/mark-all-read', (req, res) => {
   });
 });
 
+// Reactivar o regresar alerta a PENDIENTE si se marcó por error
+app.post('/api/alerts/:id/reopen', (req, res) => {
+  const alertId = parseInt(req.params.id, 10);
+  if (isNaN(alertId)) {
+    return res.status(400).json({ error: 'ID de alerta inválido' });
+  }
+
+  db.get(`SELECT * FROM alerts WHERE id = ?`, [alertId], (err, alert) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!alert) return res.status(404).json({ error: 'Alerta no encontrada' });
+
+    db.run(`UPDATE alerts SET status = 'PENDIENTE' WHERE id = ?`, [alertId], (errUp) => {
+      if (errUp) return res.status(500).json({ error: errUp.message });
+      logAudit('Alert', alertId, 'ALERTA_REACTIVADA', `Alerta de stock crítico regresada a PENDIENTE: ${alert.message}`, req.body?.user_name || 'Operador / Dashboard');
+      res.json({ status: 'ok', message: 'Alerta regresada a PENDIENTE exitosamente' });
+    });
+  });
+});
+
 // ==============================================================================
 // --- MÓDULO DE INTEGRACIÓN NATIVO CON ODOO 19 ENTERPRISE (JSON-RPC) ---
 // ==============================================================================
@@ -1051,15 +1037,15 @@ app.get('/api/odoo/status', async (req, res) => {
   }
 });
 
-// 2. Consultar Órdenes de Compra desde Odoo con partidas y estatus de recepción local
+// 2. Consultar Órdenes de Compra desde Odoo con partidas, entrega esperada y estatus de recepción local
 app.get('/api/odoo/purchase-orders', async (req, res) => {
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
   try {
-    // Consultar las últimas órdenes de compra
+    // Consultar órdenes de compra activas y recientes
     const orders = await executeOdoo('purchase.order', 'search_read', [[]], {
-      fields: ['name', 'partner_id', 'date_order', 'amount_total', 'amount_untaxed', 'state', 'order_line'],
+      fields: ['name', 'partner_id', 'date_order', 'date_planned', 'amount_total', 'amount_untaxed', 'state', 'order_line'],
       order: 'id desc',
-      limit: 20
+      limit: 25
     });
 
     if (!orders || orders.length === 0) {
@@ -1071,7 +1057,7 @@ app.get('/api/odoo/purchase-orders', async (req, res) => {
     let lines = [];
     if (lineIds.length > 0) {
       lines = await executeOdoo('purchase.order.line', 'read', [lineIds], {
-        fields: ['order_id', 'name', 'product_id', 'product_qty', 'product_uom_id', 'price_unit', 'price_subtotal', 'qty_received']
+        fields: ['order_id', 'name', 'product_id', 'product_qty', 'product_uom_id', 'price_unit', 'price_subtotal', 'qty_received', 'date_planned']
       });
     }
 
@@ -1101,6 +1087,7 @@ app.get('/api/odoo/purchase-orders', async (req, res) => {
           product_uom: uomName,
           price_unit: l.price_unit || 0,
           price_subtotal: l.price_subtotal || 0,
+          date_planned: l.date_planned || '',
           factory_received_qty: qtyRec,
           is_received: qtyRec >= (l.product_qty || 0)
         });
@@ -1116,6 +1103,7 @@ app.get('/api/odoo/purchase-orders', async (req, res) => {
           name: o.name,
           partner_name: partnerName,
           date_order: o.date_order,
+          date_planned: o.date_planned || o.date_order,
           amount_total: o.amount_total,
           amount_untaxed: o.amount_untaxed,
           odoo_state: o.state,
@@ -1128,6 +1116,75 @@ app.get('/api/odoo/purchase-orders', async (req, res) => {
     });
   } catch (err) {
     console.error('Error al consultar Odoo purchase orders:', err);
+    res.status(500).json({ status: 'error', error: err.message });
+  }
+});
+
+// 2.5 Consultar Órdenes de Venta (Pedidos de Clientes) desde Odoo - Noviembre 2026 en adelante
+app.get('/api/odoo/sales-orders', async (req, res) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  try {
+    // Filtro estricto: pedidos de clientes desde Noviembre 2026 en adelante o activos
+    const filter = [
+      '|',
+      ['date_order', '>=', '2026-11-01 00:00:00'],
+      ['state', 'in', ['sale', 'done']]
+    ];
+    const orders = await executeOdoo('sale.order', 'search_read', [filter], {
+      fields: ['name', 'partner_id', 'date_order', 'expected_date', 'commitment_date', 'amount_total', 'amount_untaxed', 'state', 'invoice_status', 'order_line'],
+      order: 'id desc',
+      limit: 30
+    });
+
+    const allLineIds = orders.flatMap(o => o.order_line || []);
+    let linesMap = {};
+    if (allLineIds.length > 0) {
+      try {
+        const lines = await executeOdoo('sale.order.line', 'read', [allLineIds.slice(0, 100)], {
+          fields: ['order_id', 'name', 'product_id', 'product_uom_qty', 'qty_delivered', 'qty_invoiced', 'price_unit', 'price_subtotal']
+        });
+        lines.forEach(l => {
+          const oId = Array.isArray(l.order_id) ? l.order_id[0] : l.order_id;
+          if (!linesMap[oId]) linesMap[oId] = [];
+          linesMap[oId].push({
+            id: l.id,
+            product_name: Array.isArray(l.product_id) ? l.product_id[1] : (l.name || 'Producto Terminado'),
+            product_qty: l.product_uom_qty || 0,
+            qty_delivered: l.qty_delivered || 0,
+            price_unit: l.price_unit || 0,
+            price_subtotal: l.price_subtotal || 0
+          });
+        });
+      } catch (errLines) {
+        console.warn('Advertencia al consultar líneas de venta:', errLines.message);
+      }
+    }
+
+    const formattedSales = orders.map(o => {
+      const partnerName = Array.isArray(o.partner_id) ? o.partner_id[1] : (o.partner_id || 'Cliente');
+      let statusLabel = 'Confirmado';
+      if (o.state === 'done') statusLabel = 'Completado';
+      else if (o.state === 'draft') statusLabel = 'Borrador / Cotización';
+      else if (o.state === 'cancel') statusLabel = 'Cancelado';
+
+      return {
+        id: o.id,
+        name: o.name,
+        partner_name: partnerName,
+        date_order: o.date_order,
+        expected_date: o.expected_date || o.commitment_date || o.date_order,
+        amount_total: o.amount_total,
+        amount_untaxed: o.amount_untaxed,
+        state: o.state,
+        status_label: statusLabel,
+        invoice_status: o.invoice_status,
+        lines: linesMap[o.id] || []
+      };
+    });
+
+    res.json({ status: 'ok', orders: formattedSales });
+  } catch (err) {
+    console.error('Error al consultar Odoo sales orders:', err);
     res.status(500).json({ status: 'error', error: err.message });
   }
 });
@@ -1196,13 +1253,29 @@ app.post('/api/odoo/receive', (req, res) => {
               );
             }
 
+            // Notificar y reflejar en Odoo (chatter de purchase.order)
+            if (odoo_order_id) {
+              try {
+                const note = `<p>📦 <b>Recepción confirmada en Fábrica/Planta Aurani</b></p><ul><li><b>Insumo:</b> ${cleanName}</li><li><b>Cantidad Recibida:</b> ${qty} ${finalUnit}</li><li><b>Lote:</b> ${finalBatch || 'Sin lote'}</li><li><b>Caducidad:</b> ${finalExp || 'No especificada'}</li><li><b>Registrado por:</b> ${user}</li></ul>`;
+                executeOdoo('purchase.order', 'message_post', [[parseInt(odoo_order_id, 10)]], {
+                  body: note,
+                  message_type: 'comment',
+                  subtype_xmlid: 'mail.mt_note'
+                }).then(() => {
+                  console.log(`✅ Recepción de ${cleanName} reflejada en Odoo OC #${odoo_order_id}`);
+                }).catch(e => console.warn('Aviso chatter Odoo:', e.message));
+              } catch (eChatter) {
+                console.warn('Error chatter Odoo:', eChatter.message);
+              }
+            }
+
             const auditDetails = `Recepción Almacén desde Odoo (${odoo_order_name || 'OC'}): +${qty} ${finalUnit} de '${cleanName}'. Stock anterior: ${existingProd.stock_quantity} -> Nuevo: ${newStock}. Prov: ${finalSupp}, Lote: ${finalBatch || '-'}, Cad: ${finalExp || '-'}`;
             logAudit('Product', existingProd.id, 'RECEPCION_ODOO', auditDetails, user);
 
             db.get(`SELECT * FROM products WHERE id = ?`, [existingProd.id], (e, updatedRow) => {
               res.json({
                 status: 'ok',
-                message: `¡${qty} ${finalUnit} de '${cleanName}' recibidos e ingresados al inventario exitosamente!`,
+                message: `¡${qty} ${finalUnit} de '${cleanName}' recibidos e ingresados al inventario exitosamente (reflejado en Odoo)!`,
                 product: updatedRow
               });
             });
@@ -1225,13 +1298,29 @@ app.post('/api/odoo/receive', (req, res) => {
               () => {}
             );
 
+            // Notificar y reflejar en Odoo (chatter de purchase.order)
+            if (odoo_order_id) {
+              try {
+                const note = `<p>📦 <b>Alta y Recepción confirmada en Fábrica/Planta Aurani</b></p><ul><li><b>Nuevo Insumo:</b> ${cleanName}</li><li><b>Cantidad Recibida:</b> ${qty} ${cleanUnit}</li><li><b>Lote:</b> ${cleanBatch || 'Sin lote'}</li><li><b>Caducidad:</b> ${cleanExp || 'No especificada'}</li><li><b>Registrado por:</b> ${user}</li></ul>`;
+                executeOdoo('purchase.order', 'message_post', [[parseInt(odoo_order_id, 10)]], {
+                  body: note,
+                  message_type: 'comment',
+                  subtype_xmlid: 'mail.mt_note'
+                }).then(() => {
+                  console.log(`✅ Alta y recepción de ${cleanName} reflejada en Odoo OC #${odoo_order_id}`);
+                }).catch(e => console.warn('Aviso chatter Odoo:', e.message));
+              } catch (eChatter) {
+                console.warn('Error chatter Odoo:', eChatter.message);
+              }
+            }
+
             const auditDetails = `Alta y Recepción desde Odoo (${odoo_order_name || 'OC'}): Creado nuevo producto '${cleanName}' con ${qty} ${cleanUnit}. Prov: ${cleanPartner}, Lote: ${cleanBatch || '-'}, Cad: ${cleanExp || '-'}`;
             logAudit('Product', newId, 'ALTA_ODOO', auditDetails, user);
 
             db.get(`SELECT * FROM products WHERE id = ?`, [newId], (e, newRow) => {
               res.status(201).json({
                 status: 'ok',
-                message: `¡Nuevo insumo '${cleanName}' registrado y recibido desde Odoo con ${qty} ${cleanUnit}!`,
+                message: `¡Nuevo insumo '${cleanName}' registrado y recibido desde Odoo con ${qty} ${cleanUnit} (reflejado en Odoo)!`,
                 product: newRow
               });
             });
@@ -1251,29 +1340,77 @@ app.get('/api/odoo/receptions', (req, res) => {
   });
 });
 
-// 5. Consultar Facturas de Proveedor desde Odoo (account.move)
+// 5. Consultar Facturas desde Odoo (account.move) - Noviembre 2026 en adelante con estatus de pago
 app.get('/api/odoo/invoices', async (req, res) => {
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
   try {
-    const invoices = await executeOdoo('account.move', 'search_read', [
-      [['move_type', '=', 'in_invoice']]
-    ], {
-      fields: ['name', 'ref', 'partner_id', 'invoice_date', 'amount_total', 'amount_untaxed', 'state', 'payment_state'],
+    const filter = [
+      ['move_type', 'in', ['in_invoice', 'out_invoice']],
+      '|',
+      ['invoice_date', '>=', '2026-11-01'],
+      ['date', '>=', '2026-11-01']
+    ];
+
+    let invoices = await executeOdoo('account.move', 'search_read', [filter], {
+      fields: ['name', 'ref', 'partner_id', 'invoice_date', 'invoice_date_due', 'amount_total', 'amount_untaxed', 'state', 'payment_state', 'move_type'],
       order: 'id desc',
-      limit: 25
+      limit: 30
     });
 
-    const formattedInvoices = (invoices || []).map(inv => ({
-      id: inv.id,
-      name: inv.name,
-      ref: inv.ref || '',
-      partner_name: Array.isArray(inv.partner_id) ? inv.partner_id[1] : (inv.partner_id || 'Proveedor'),
-      invoice_date: inv.invoice_date,
-      amount_total: inv.amount_total,
-      amount_untaxed: inv.amount_untaxed,
-      state: inv.state,
-      payment_state: inv.payment_state
-    }));
+    if (!invoices || invoices.length === 0) {
+      invoices = await executeOdoo('account.move', 'search_read', [
+        [['move_type', 'in', ['in_invoice', 'out_invoice']]]
+      ], {
+        fields: ['name', 'ref', 'partner_id', 'invoice_date', 'invoice_date_due', 'amount_total', 'amount_untaxed', 'state', 'payment_state', 'move_type'],
+        order: 'id desc',
+        limit: 25
+      });
+    }
+
+    const formattedInvoices = (invoices || []).map(inv => {
+      let paymentLabel = 'Pendiente de Pago';
+      let paymentColor = 'warning';
+      let isPaid = false;
+
+      if (inv.payment_state === 'paid') {
+        paymentLabel = 'Pagada';
+        paymentColor = 'success';
+        isPaid = true;
+      } else if (inv.payment_state === 'in_payment') {
+        paymentLabel = 'En Proceso de Pago';
+        paymentColor = 'success';
+        isPaid = true;
+      } else if (inv.payment_state === 'partial') {
+        paymentLabel = 'Pago Parcial';
+        paymentColor = 'accent';
+      } else if (inv.payment_state === 'not_paid') {
+        paymentLabel = 'No Pagada';
+        paymentColor = 'warning';
+      } else if (inv.payment_state === 'reversed') {
+        paymentLabel = 'Revertida';
+        paymentColor = 'danger';
+      }
+
+      const typeLabel = inv.move_type === 'out_invoice' ? 'Factura Cliente (Venta)' : 'Factura Proveedor (Compra)';
+
+      return {
+        id: inv.id,
+        name: inv.name,
+        ref: inv.ref || '',
+        partner_name: Array.isArray(inv.partner_id) ? inv.partner_id[1] : (inv.partner_id || 'Contacto'),
+        invoice_date: inv.invoice_date || '',
+        invoice_date_due: inv.invoice_date_due || '',
+        amount_total: inv.amount_total,
+        amount_untaxed: inv.amount_untaxed,
+        state: inv.state,
+        payment_state: inv.payment_state,
+        payment_label: paymentLabel,
+        payment_color: paymentColor,
+        is_paid: isPaid,
+        move_type: inv.move_type,
+        type_label: typeLabel
+      };
+    });
 
     res.json({ status: 'ok', invoices: formattedInvoices });
   } catch (err) {
