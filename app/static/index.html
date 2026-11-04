@@ -429,8 +429,8 @@
         </div>
       </div>
 
-      <!-- TABLA USUARIOS REGISTRADOS -->
-      <div class="card-aurani overflow-hidden shadow-sm mt-6">
+      <!-- TABLA USUARIOS REGISTRADOS (Acceso Exclusivo: Directora y Encargada de Almacén) -->
+      <div id="sec-users-management" class="card-aurani overflow-hidden shadow-sm mt-6">
         <div class="p-4 bg-pink-50/40 border-b border-pink-100 flex justify-between items-center flex-wrap gap-2">
           <div class="flex items-center space-x-2.5">
             <h3 class="text-sm font-bold text-aurani-magenta flex items-center space-x-2">
@@ -444,7 +444,7 @@
               <i class="fa-solid fa-arrows-rotate text-purple-700"></i>
               <span>Actualizar</span>
             </button>
-            <button type="button" onclick="openRegisterUserModal()" class="px-3.5 py-1.5 bg-aurani-magenta hover:bg-pink-700 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer shadow-sm">
+            <button type="button" onclick="openRegisterUserModal(false)" class="px-3.5 py-1.5 bg-aurani-magenta hover:bg-pink-700 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer shadow-sm">
               <i class="fa-solid fa-user-plus"></i>
               <span>+ Dar de Alta Usuario</span>
             </button>
@@ -467,6 +467,17 @@
             </tbody>
           </table>
         </div>
+      </div>
+
+      <!-- AVISO DE ACCESO RESTRINGIDO PARA OPERADORES (Si no es Directora ni Encargada de Almacén) -->
+      <div id="sec-users-restricted-notice" class="hidden p-6 bg-slate-50 border border-slate-200 rounded-2xl text-center space-y-2 mt-6">
+        <div class="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-pink-50 text-aurani-magenta text-xl shadow-inner">
+          <i class="fa-solid fa-user-shield"></i>
+        </div>
+        <h4 class="text-sm font-bold text-slate-800">Directorio de Usuarios Protegido</h4>
+        <p class="text-xs text-slate-500 max-w-md mx-auto">
+          La administración de personal, cuentas y asignación de contraseñas está reservada exclusivamente para la <strong>Directora General</strong> y la <strong>Encargada de Almacén</strong>.
+        </p>
       </div>
     </section>
 
@@ -1289,6 +1300,50 @@
     // --- GESTIÓN DE AUTENTICACIÓN Y OPERADORES ---
     let currentAuthUser = null;
 
+    // --- GESTIÓN DE ROLES Y PERMISOS (DIRECTORA Y ENCARGADA DE ALMACÉN) ---
+    function isAuthorizedManager(user) {
+      if (!user) return false;
+      const email = (user.email || '').toLowerCase().trim();
+      const role = (user.role || '').toLowerCase().trim();
+      const name = (user.name || '').toLowerCase().trim();
+
+      return (
+        email === 'almacen@aurani.mx' ||
+        email === 'directora@aurani.mx' ||
+        role.includes('directora') ||
+        role.includes('almacen') ||
+        role.includes('almacén') ||
+        name.includes('aura ilse') ||
+        name.includes('alejandra alvarado')
+      );
+    }
+
+    function applyRolePermissions() {
+      const isManager = isAuthorizedManager(currentAuthUser);
+
+      // 1. Mostrar u ocultar la tabla de usuarios registrados (Directorio del screenshot)
+      const secUsers = document.getElementById('sec-users-management');
+      const noticeUsers = document.getElementById('sec-users-restricted-notice');
+      if (secUsers) {
+        secUsers.classList.toggle('hidden', !isManager);
+      }
+      if (noticeUsers) {
+        noticeUsers.classList.toggle('hidden', isManager);
+      }
+
+      // 2. Control en el menú lateral para pestaña "Historial & Usuarios"
+      const btnAudit = document.getElementById('btn-audit');
+      if (btnAudit) {
+        btnAudit.classList.toggle('hidden', !isManager);
+      }
+
+      // 3. Si un operador sin permisos está en tab-audit, enviarlo a inventario
+      const tabAudit = document.getElementById('tab-audit');
+      if (!isManager && tabAudit && !tabAudit.classList.contains('hidden')) {
+        switchTab('tab-inventory');
+      }
+    }
+
     function initAuth() {
       const stored = localStorage.getItem('aurani_user');
       if (stored) {
@@ -1300,6 +1355,7 @@
           localStorage.removeItem('aurani_user');
         }
       }
+      applyRolePermissions();
       showLoginModal();
     }
 
@@ -1317,6 +1373,9 @@
       currentAuthUser = user;
       localStorage.setItem('aurani_user', JSON.stringify(user));
       hideLoginModal();
+
+      // Aplicar permisos según rol del usuario logueado
+      applyRolePermissions();
 
       // Actualizar información en el Sidebar
       const avatarEl = document.getElementById('sidebar-user-avatar');
@@ -1395,6 +1454,7 @@
       if (confirm('¿Deseas cerrar sesión o cambiar de operador?')) {
         localStorage.removeItem('aurani_user');
         currentAuthUser = null;
+        applyRolePermissions();
         showLoginModal();
       }
     }
@@ -1403,6 +1463,10 @@
 
     // 1. Funciones de Administrador (Directora Aura Ilse / Encargada de Almacén Alejandra)
     function openAdminResetPasswordModal(userId, userName, userEmail) {
+      if (!isAuthorizedManager(currentAuthUser)) {
+        alert("Acceso denegado: Solo la Directora General y la Encargada de Almacén pueden cambiar contraseñas.");
+        return;
+      }
       document.getElementById('admin-reset-user-id').value = userId;
       document.getElementById('admin-reset-user-name').textContent = userName || 'Usuario';
       document.getElementById('admin-reset-user-email').textContent = userEmail || '';
@@ -1427,6 +1491,10 @@
 
     async function handleAdminResetPasswordSubmit(event) {
       event.preventDefault();
+      if (!isAuthorizedManager(currentAuthUser)) {
+        alert("Acceso denegado: Solo la Directora General y la Encargada de Almacén pueden cambiar contraseñas.");
+        return;
+      }
       const userId = document.getElementById('admin-reset-user-id').value;
       const newPassword = document.getElementById('admin-reset-new-password').value.trim();
       const userName = document.getElementById('admin-reset-user-name').textContent;
@@ -1445,7 +1513,10 @@
       try {
         const res = await fetch(API_BASE + `/api/users/${userId}/password`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-admin-user': currentAuthUser?.email || adminWho
+          },
           body: JSON.stringify({ newPassword, adminName: adminWho })
         });
         const data = await res.json();
@@ -1921,12 +1992,23 @@
     }
 
     async function fetchUsers(btn) {
+      if (!isAuthorizedManager(currentAuthUser)) {
+        const secUsers = document.getElementById('sec-users-management');
+        if (secUsers) secUsers.classList.add('hidden');
+        const noticeUsers = document.getElementById('sec-users-restricted-notice');
+        if (noticeUsers) noticeUsers.classList.remove('hidden');
+        return;
+      }
       if (btn) {
         btn.disabled = true;
         btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-purple-700"></i><span>Cargando...</span>`;
       }
       try {
-        const res = await fetch(API_BASE + '/api/users?t=' + Date.now(), { cache: 'no-store' });
+        const adminHeader = currentAuthUser ? (currentAuthUser.email || currentAuthUser.name) : 'Ing. Alejandra Alvarado Reyes';
+        const res = await fetch(API_BASE + '/api/users?t=' + Date.now(), { 
+          cache: 'no-store',
+          headers: { 'x-admin-user': adminHeader }
+        });
         const data = await res.json();
         const tbody = document.getElementById('users-table-body');
         const badge = document.getElementById('badge-users-count');
@@ -1986,6 +2068,10 @@
     }
 
     async function deleteUser(id, name) {
+      if (!isAuthorizedManager(currentAuthUser)) {
+        alert("Acceso denegado: Solo la Directora General y la Encargada de Almacén pueden dar de baja usuarios.");
+        return;
+      }
       if (!confirm(`¿Estás segura de dar de baja al usuario "${name}"?\nYa no tendrá acceso a la App Android ni al sistema.`)) {
         return;
       }
@@ -1993,7 +2079,10 @@
       try {
         const res = await fetch(API_BASE + `/api/users/${id}`, {
           method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-admin-user': currentAuthUser?.email || adminWho
+          },
           body: JSON.stringify({ adminName: adminWho })
         });
         const data = await res.json();
@@ -2479,6 +2568,11 @@
     }
 
     function switchTab(tabId) {
+      if (tabId === 'tab-audit' && !isAuthorizedManager(currentAuthUser)) {
+        alert("Acceso Restringido: El historial y la administración de usuarios son de uso exclusivo para la Directora General y la Encargada de Almacén.");
+        tabId = 'tab-inventory';
+      }
+
       if (tabId === 'tab-critico') {
         activeCategory = 'CRITICO';
       } else if (tabId === 'tab-inventory') {

@@ -545,8 +545,28 @@ app.post('/api/auth/recover-password', (req, res) => {
   });
 });
 
+// Helper para verificar permisos de administración (Directora General y Encargada de Almacén)
+function isAuthorizedManagerName(nameOrEmail) {
+  if (!nameOrEmail) return false;
+  const s = nameOrEmail.toString().toLowerCase().trim();
+  return (
+    s === 'almacen@aurani.mx' ||
+    s === 'directora@aurani.mx' ||
+    s.includes('alejandra') ||
+    s.includes('aura') ||
+    s.includes('directora') ||
+    s.includes('almacen') ||
+    s.includes('almacén')
+  );
+}
+
 // Endpoint para consultar todos los usuarios registrados (nube y local)
+// Exclusivo para Directora General y Encargada de Almacén
 app.get('/api/users', (req, res) => {
+  const adminWho = req.headers['x-admin-user'] || req.query.adminName || req.query.admin || '';
+  if (adminWho && !isAuthorizedManagerName(adminWho)) {
+    return res.status(403).json({ error: 'Acceso denegado. Exclusivo para Directora General y Encargada de Almacén.' });
+  }
   db.all(`SELECT id, name, email, role, created_at FROM users ORDER BY id ASC`, (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
@@ -557,6 +577,11 @@ app.get('/api/users', (req, res) => {
 app.put('/api/users/:id/password', (req, res) => {
   const userId = req.params.id;
   const { newPassword, adminName } = req.body;
+  const who = (adminName || req.headers['x-admin-user'] || 'Ing. Alejandra Alvarado Reyes').trim();
+
+  if (!isAuthorizedManagerName(who)) {
+    return res.status(403).json({ error: 'Acceso denegado. Solo la Directora General y la Encargada de Almacén pueden cambiar contraseñas.' });
+  }
 
   if (!newPassword || newPassword.trim().length < 4) {
     return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 4 caracteres' });
@@ -569,7 +594,6 @@ app.put('/api/users/:id/password', (req, res) => {
     const hashedPassword = bcrypt.hashSync(newPassword.trim(), 10);
     db.run(`UPDATE users SET password = ? WHERE id = ?`, [hashedPassword, userId], function(updateErr) {
       if (updateErr) return res.status(500).json({ error: 'Error al actualizar la contraseña en la base de datos' });
-      const who = (adminName || 'Ing. Alejandra Alvarado Reyes').trim();
       logAudit('User', userId, 'RESET_PASSWORD_ADMIN', `Contraseña de ${user.name} (${user.email}) restablecida por ${who}`, who);
       res.json({
         status: 'ok',
@@ -583,7 +607,11 @@ app.put('/api/users/:id/password', (req, res) => {
 // Endpoint para dar de baja / eliminar usuario (excepto administradoras)
 app.delete('/api/users/:id', (req, res) => {
   const userId = req.params.id;
-  const adminName = (req.body?.adminName || req.query?.adminName || 'Ing. Alejandra Alvarado Reyes').trim();
+  const adminName = (req.body?.adminName || req.query?.adminName || req.headers['x-admin-user'] || 'Ing. Alejandra Alvarado Reyes').trim();
+
+  if (!isAuthorizedManagerName(adminName)) {
+    return res.status(403).json({ error: 'Acceso denegado. Solo la Directora General y la Encargada de Almacén pueden dar de baja usuarios.' });
+  }
 
   db.get(`SELECT id, name, email, role FROM users WHERE id = ?`, [userId], (err, user) => {
     if (err) return res.status(500).json({ error: err.message });
