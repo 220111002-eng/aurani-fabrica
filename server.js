@@ -964,7 +964,7 @@ const ODOO_CONFIG = {
   url: process.env.ODOO_URL || 'https://grupo-aurani-sa-de-cv.odoo.com/jsonrpc',
   db: process.env.ODOO_DB || 'grupo-aurani-sa-de-cv',
   username: process.env.ODOO_USER || 'alealvaradoreyes1012z@gmail.com',
-  apiKey: process.env.ODOO_API_KEY || 'bd517d9f3da24fedfaf9e69bfb3e44cc566c1022'
+  apiKey: process.env.ODOO_API_KEY || 'e1fd2c8a0ef94ecdd329017f80e0b6a3b227f438'
 };
 
 let cachedOdooUid = null;
