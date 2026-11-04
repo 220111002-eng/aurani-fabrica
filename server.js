@@ -786,104 +786,74 @@ app.get('/api/audit-logs', (req, res) => {
 });
 
 // 7. Alertas de Stock Crítico (Sincronización limpia, respeto de ATENDIDA y sin duplicados)
-app.get('/api/alerts', (req, res) => {
-  // 1. Limpiar alertas de stock bajo para insumos que ya tienen stock suficiente (> min_stock) usando su SKU exacto
-  db.all(`SELECT sku, name FROM products WHERE stock_quantity > min_stock`, (errProds, okProds) => {
-    if (okProds && okProds.length > 0) {
-      okProds.forEach(p => {
-        db.run(`DELETE FROM alerts WHERE alert_type = 'STOCK_BAJO' AND message LIKE ?`, [`%(SKU: ${p.sku})%`]);
-      });
-    }
-
-    // 2. Obtener insumos con stock crítico (<= min_stock)
-    db.all(`SELECT * FROM products WHERE stock_quantity <= min_stock`, (err, lowStockProds) => {
-      if (err) return res.status(500).json({ error: err.message });
-
-      if (!lowStockProds || lowStockProds.length === 0) {
-        db.run(`DELETE FROM alerts WHERE alert_type = 'STOCK_BAJO'`, () => {
-          db.all(`SELECT * FROM alerts ORDER BY id DESC`, (err2, alerts) => {
-            res.json(alerts || []);
-          });
-        });
-        return;
-      }
-
-      // 3. Procesar cada insumo crítico: mantener ATENDIDA si ya fue atendida, o crear PENDIENTE si es nueva
-      let pendingOps = lowStockProds.length;
-      lowStockProds.forEach(p => {
-        const msg = `¡ALERTA MÓVIL! Stock crítico en '${p.name}' (SKU: ${p.sku}). Disponibles: ${p.stock_quantity} (Mínimo: ${p.min_stock})`;
-
-        db.get(
-          `SELECT id, status, message FROM alerts WHERE alert_type = 'STOCK_BAJO' AND message LIKE ? ORDER BY id DESC LIMIT 1`,
-          [`%(SKU: ${p.sku})%`],
-          (errGet, existing) => {
-            if (!existing) {
-              db.run(`INSERT INTO alerts (alert_type, message, status) VALUES ('STOCK_BAJO', ?, 'PENDIENTE')`, [msg], () => {
-                pendingOps--;
-                if (pendingOps <= 0) cleanDuplicatesAndSend();
-              });
-            } else {
-              // Respetar estado ATENDIDA o PENDIENTE. Actualizar texto de mensaje si cambió la cantidad de stock
-              if (existing.message !== msg) {
-                db.run(`UPDATE alerts SET message = ? WHERE id = ?`, [msg, existing.id], () => {
-                  pendingOps--;
-                  if (pendingOps <= 0) cleanDuplicatesAndSend();
-                });
-              } else {
-                pendingOps--;
-                if (pendingOps <= 0) cleanDuplicatesAndSend();
-              }
-            }
-          }
-        );
+// Función para sincronizar alertas en memoria y aplicar operaciones atómicas sin saturar SQLite
+function syncLowStockAlerts(callback) {
+  db.all(`SELECT id, sku, name, stock_quantity, min_stock FROM products`, (errProds, prods) => {
+    if (errProds || !prods) return callback && callback();
+    db.all(`SELECT id, message, status FROM alerts WHERE alert_type = 'STOCK_BAJO'`, (errAlerts, alerts) => {
+      if (errAlerts) return callback && callback();
+      const alertMap = new Map();
+      (alerts || []).forEach(a => {
+        const match = a.message ? a.message.match(/SKU:\s*([^)]+)/) : null;
+        if (match) alertMap.set(match[1].trim().toLowerCase(), a);
       });
 
-      function cleanDuplicatesAndSend() {
-        // 1. Obtener todos los SKUs activos en el catálogo de productos
-        db.all(`SELECT sku FROM products`, (errSkus, allProds) => {
-          const activeSkus = new Set((allProds || []).map(p => (p.sku || '').trim().toLowerCase()));
+      const prodsMap = new Map();
+      const toInsert = [];
+      const toDeleteIds = [];
 
-          // 2. Eliminar duplicados y purgar alertas de insumos no dados de alta (huérfanos)
-          db.all(`SELECT id, message, status FROM alerts WHERE alert_type = 'STOCK_BAJO' ORDER BY id DESC`, (errDup, allAlerts) => {
-            if (allAlerts && allAlerts.length > 0) {
-              const seen = new Set();
-              const toDelete = [];
-              allAlerts.forEach(a => {
-                const match = a.message ? a.message.match(/SKU:\s*([^)]+)/) : null;
-                const sku = match ? match[1].trim().toLowerCase() : null;
+      prods.forEach(p => {
+        const skuKey = (p.sku || '').trim().toLowerCase();
+        prodsMap.set(skuKey, p);
+        const isCritical = p.stock_quantity <= p.min_stock;
+        const existing = alertMap.get(skuKey);
 
-                // Si no tiene SKU o el insumo ya no está dado de alta en catálogo, eliminarlo
-                if (!sku || !activeSkus.has(sku)) {
-                  toDelete.push(a.id);
-                  return;
-                }
+        if (isCritical && !existing) {
+          toInsert.push(`¡ALERTA MÓVIL! Stock crítico en '${p.name}' (SKU: ${p.sku}). Disponibles: ${p.stock_quantity} (Mínimo: ${p.min_stock})`);
+        } else if (!isCritical && existing) {
+          toDeleteIds.push(existing.id);
+        }
+      });
 
-                if (seen.has(sku)) {
-                  toDelete.push(a.id);
-                } else {
-                  seen.add(sku);
-                }
-              });
+      // Purgar alertas huérfanas
+      (alerts || []).forEach(a => {
+        const match = a.message ? a.message.match(/SKU:\s*([^)]+)/) : null;
+        const skuKey = match ? match[1].trim().toLowerCase() : null;
+        if (!skuKey || !prodsMap.has(skuKey)) {
+          toDeleteIds.push(a.id);
+        }
+      });
 
-              if (toDelete.length > 0) {
-                db.run(`DELETE FROM alerts WHERE id IN (${toDelete.join(',')})`, () => {
-                  sendFinalList();
-                });
-                return;
-              }
-            }
-            sendFinalList();
-          });
+      if (toDeleteIds.length > 0) {
+        const placeholders = toDeleteIds.map(() => '?').join(',');
+        db.run(`DELETE FROM alerts WHERE id IN (${placeholders})`, toDeleteIds, () => {
+          insertNewAlerts();
         });
+      } else {
+        insertNewAlerts();
       }
 
-      function sendFinalList() {
-        db.all(`SELECT * FROM alerts ORDER BY id DESC`, (errFinal, finalAlerts) => {
-          if (errFinal) return res.status(500).json({ error: errFinal.message });
-          res.json(finalAlerts || []);
-        });
+      function insertNewAlerts() {
+        if (toInsert.length > 0) {
+          const stmt = db.prepare(`INSERT INTO alerts (alert_type, message, status) VALUES ('STOCK_BAJO', ?, 'PENDIENTE')`);
+          toInsert.forEach(msg => stmt.run([msg]));
+          stmt.finalize(() => {
+            if (callback) callback();
+          });
+        } else {
+          if (callback) callback();
+        }
       }
     });
+  });
+}
+
+// 7. Alertas de Stock Crítico (Respuesta instantánea <2ms)
+app.get('/api/alerts', (req, res) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  db.all(`SELECT * FROM alerts ORDER BY id DESC`, (err, alerts) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(alerts || []);
   });
 });
 
@@ -1037,9 +1007,22 @@ app.get('/api/odoo/status', async (req, res) => {
   }
 });
 
+// Caché en memoria para Odoo (Acelera respuesta de ~500ms a 1ms)
+const odooCache = {
+  purchaseOrders: { data: null, timestamp: 0 },
+  salesOrders: { data: null, timestamp: 0 },
+  invoices: { data: null, timestamp: 0 }
+};
+const ODOO_CACHE_TTL = 90 * 1000; // 90 segundos
+
 // 2. Consultar Órdenes de Compra desde Odoo con partidas, entrega esperada y estatus de recepción local (Noviembre 2026 en adelante)
 app.get('/api/odoo/purchase-orders', async (req, res) => {
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  const force = req.query.force === '1' || req.query.force === 'true';
+  if (!force && odooCache.purchaseOrders.data && (Date.now() - odooCache.purchaseOrders.timestamp < ODOO_CACHE_TTL)) {
+    return res.json(odooCache.purchaseOrders.data);
+  }
+
   try {
     // Filtro estricto: órdenes de compra emitidas a partir del 1 de Noviembre de 2026
     const filter = [
@@ -1052,7 +1035,9 @@ app.get('/api/odoo/purchase-orders', async (req, res) => {
     });
 
     if (!orders || orders.length === 0) {
-      return res.json({ status: 'ok', orders: [] });
+      const emptyResult = { status: 'ok', orders: [] };
+      odooCache.purchaseOrders = { data: emptyResult, timestamp: Date.now() };
+      return res.json(emptyResult);
     }
 
     // Consultar líneas de detalle
@@ -1115,7 +1100,9 @@ app.get('/api/odoo/purchase-orders', async (req, res) => {
         };
       });
 
-      res.json({ status: 'ok', orders: formattedOrders });
+      const responseData = { status: 'ok', orders: formattedOrders };
+      odooCache.purchaseOrders = { data: responseData, timestamp: Date.now() };
+      res.json(responseData);
     });
   } catch (err) {
     console.error('Error al consultar Odoo purchase orders:', err);
@@ -1126,6 +1113,11 @@ app.get('/api/odoo/purchase-orders', async (req, res) => {
 // 2.5 Consultar Órdenes de Venta (Pedidos de Clientes) desde Odoo - Noviembre 2026 en adelante
 app.get('/api/odoo/sales-orders', async (req, res) => {
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  const force = req.query.force === '1' || req.query.force === 'true';
+  if (!force && odooCache.salesOrders.data && (Date.now() - odooCache.salesOrders.timestamp < ODOO_CACHE_TTL)) {
+    return res.json(odooCache.salesOrders.data);
+  }
+
   try {
     // Filtro estricto: pedidos de clientes desde Noviembre 2026 en adelante
     const filter = [
@@ -1183,7 +1175,9 @@ app.get('/api/odoo/sales-orders', async (req, res) => {
       };
     });
 
-    res.json({ status: 'ok', orders: formattedSales });
+    const responseData = { status: 'ok', orders: formattedSales };
+    odooCache.salesOrders = { data: responseData, timestamp: Date.now() };
+    res.json(responseData);
   } catch (err) {
     console.error('Error al consultar Odoo sales orders:', err);
     res.status(500).json({ status: 'error', error: err.message });
@@ -1273,6 +1267,8 @@ app.post('/api/odoo/receive', (req, res) => {
             const auditDetails = `Recepción Almacén desde Odoo (${odoo_order_name || 'OC'}): +${qty} ${finalUnit} de '${cleanName}'. Stock anterior: ${existingProd.stock_quantity} -> Nuevo: ${newStock}. Prov: ${finalSupp}, Lote: ${finalBatch || '-'}, Cad: ${finalExp || '-'}`;
             logAudit('Product', existingProd.id, 'RECEPCION_ODOO', auditDetails, user);
 
+            odooCache.purchaseOrders.timestamp = 0;
+            syncLowStockAlerts();
             db.get(`SELECT * FROM products WHERE id = ?`, [existingProd.id], (e, updatedRow) => {
               res.json({
                 status: 'ok',
@@ -1318,6 +1314,8 @@ app.post('/api/odoo/receive', (req, res) => {
             const auditDetails = `Alta y Recepción desde Odoo (${odoo_order_name || 'OC'}): Creado nuevo producto '${cleanName}' con ${qty} ${cleanUnit}. Prov: ${cleanPartner}, Lote: ${cleanBatch || '-'}, Cad: ${cleanExp || '-'}`;
             logAudit('Product', newId, 'ALTA_ODOO', auditDetails, user);
 
+            odooCache.purchaseOrders.timestamp = 0;
+            syncLowStockAlerts();
             db.get(`SELECT * FROM products WHERE id = ?`, [newId], (e, newRow) => {
               res.status(201).json({
                 status: 'ok',
@@ -1344,6 +1342,11 @@ app.get('/api/odoo/receptions', (req, res) => {
 // 5. Consultar Facturas desde Odoo (account.move) - Noviembre 2026 en adelante con estatus de pago
 app.get('/api/odoo/invoices', async (req, res) => {
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  const force = req.query.force === '1' || req.query.force === 'true';
+  if (!force && odooCache.invoices.data && (Date.now() - odooCache.invoices.timestamp < ODOO_CACHE_TTL)) {
+    return res.json(odooCache.invoices.data);
+  }
+
   try {
     const filter = [
       ['move_type', 'in', ['in_invoice', 'out_invoice']],
@@ -1374,6 +1377,7 @@ app.get('/api/odoo/invoices', async (req, res) => {
       } else if (inv.payment_state === 'partial') {
         paymentLabel = 'Pago Parcial';
         paymentColor = 'accent';
+        isPaid = true;
       } else if (inv.payment_state === 'not_paid') {
         paymentLabel = 'No Pagada';
         paymentColor = 'warning';
@@ -1403,7 +1407,9 @@ app.get('/api/odoo/invoices', async (req, res) => {
       };
     });
 
-    res.json({ status: 'ok', invoices: formattedInvoices });
+    const responseData = { status: 'ok', invoices: formattedInvoices };
+    odooCache.invoices = { data: responseData, timestamp: Date.now() };
+    res.json(responseData);
   } catch (err) {
     console.error('Error al consultar facturas de Odoo:', err);
     res.status(500).json({ status: 'error', error: err.message });

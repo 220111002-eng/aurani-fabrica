@@ -497,7 +497,7 @@
           <p class="text-xs text-purple-200">Recepción física en fábrica: confirma las materias primas que descargan en el almacén con su lote y caducidad real.</p>
         </div>
         <div class="flex items-center space-x-2 no-print">
-          <button onclick="fetchOdooData()" id="btn-sync-odoo" class="px-4 py-2.5 bg-white text-purple-950 hover:bg-purple-50 rounded-xl text-xs font-extrabold shadow-lg flex items-center space-x-2 cursor-pointer transition">
+          <button onclick="fetchOdooData(true)" id="btn-sync-odoo" class="px-4 py-2.5 bg-white text-purple-950 hover:bg-purple-50 rounded-xl text-xs font-extrabold shadow-lg flex items-center space-x-2 cursor-pointer transition">
             <i class="fa-solid fa-arrows-rotate text-purple-700"></i>
             <span>Sincronizar con Odoo</span>
           </button>
@@ -1871,27 +1871,39 @@
       }
     });
 
+    let searchDebounce = null;
     function filterWebInventory(query) {
-      const q = (query || '').toLowerCase().trim();
-      if (!q) {
+      clearTimeout(searchDebounce);
+      searchDebounce = setTimeout(() => {
+        const q = (query || '').toLowerCase().trim();
+        if (!q) {
+          renderProducts();
+          return;
+        }
+
+        const filtered = currentProducts.filter(p => 
+          (p.sku && p.sku.toLowerCase().includes(q)) ||
+          (p.name && p.name.toLowerCase().includes(q)) ||
+          (p.category && p.category.toLowerCase().includes(q)) ||
+          (p.supplier_name && p.supplier_name.toLowerCase().includes(q)) ||
+          (p.batch_number && p.batch_number.toLowerCase().includes(q))
+        );
+
+        const backup = currentProducts;
+        currentProducts = filtered;
         renderProducts();
-        return;
-      }
-
-      const filtered = currentProducts.filter(p => 
-        (p.sku && p.sku.toLowerCase().includes(q)) ||
-        (p.name && p.name.toLowerCase().includes(q)) ||
-        (p.category && p.category.toLowerCase().includes(q))
-      );
-
-      const backup = currentProducts;
-      currentProducts = filtered;
-      renderProducts();
-      currentProducts = backup;
+        currentProducts = backup;
+      }, 60);
     }
 
     async function loadData() {
-      await Promise.all([fetchProducts(), fetchQuotes(), fetchAuditLogs(), fetchAlerts(), fetchUsers(), fetchOdooData()]);
+      // Prioridad 1: Cargar catálogo, alertas y cotizaciones de inmediato (lo que ve el usuario)
+      await Promise.all([fetchProducts(), fetchAlerts(), fetchQuotes()]);
+
+      // Prioridad 2: Cargar auditoría, usuarios y Odoo en segundo plano sin trabar la interfaz
+      fetchAuditLogs();
+      fetchUsers();
+      fetchOdooData();
     }
 
     function filterCategory(cat) {
@@ -1920,9 +1932,9 @@
 
       if (!tbodyMP || !tbodyMuestras || !tbodyEmpaque) return;
 
-      tbodyMP.innerHTML = '';
-      tbodyMuestras.innerHTML = '';
-      tbodyEmpaque.innerHTML = '';
+      const htmlMP = [];
+      const htmlMuestras = [];
+      const htmlEmpaque = [];
 
       let countMP = 0, countMuestras = 0, countEmpaque = 0;
 
@@ -1930,13 +1942,21 @@
       const critBadge = document.getElementById('tab-badge-critico');
       if (critBadge) critBadge.innerText = totalCritical;
 
+      // Indexar alertas en un Map para consulta instantánea O(1)
+      const alertMap = new Map();
+      (currentAlerts || []).forEach(a => {
+        const match = a.message ? a.message.match(/SKU:\s*([^)]+)/) : null;
+        if (match) alertMap.set(match[1].trim().toLowerCase(), a);
+      });
+
       currentProducts.forEach(p => {
         const catLower = (p.category || 'General').toLowerCase().trim();
         const isCritical = p.stock_quantity <= p.min_stock;
 
         if (activeCategory === 'CRITICO' && !isCritical) return;
 
-        const prodAlert = currentAlerts.find(a => (p.sku && a.message.includes(p.sku)) || a.message.includes(p.name));
+        const skuKey = (p.sku || '').trim().toLowerCase();
+        const prodAlert = alertMap.get(skuKey);
         const isAttended = prodAlert && prodAlert.status === 'ATENDIDA';
 
         let statusBadge = '';
@@ -1987,7 +2007,7 @@
         `;
 
         if (catLower.includes('muestra')) {
-          tbodyMuestras.innerHTML += rowHtml;
+          htmlMuestras.push(rowHtml);
           countMuestras++;
         } else if (catLower.includes('empaque') || catLower.includes('embalaje')) {
           const unlotified = p.unlotified_stock !== undefined && p.unlotified_stock !== null ? p.unlotified_stock : p.stock_quantity;
@@ -2018,23 +2038,17 @@
               </td>
             </tr>
           `;
-          tbodyEmpaque.innerHTML += rowEmpaqueHtml;
+          htmlEmpaque.push(rowEmpaqueHtml);
           countEmpaque++;
         } else {
-          tbodyMP.innerHTML += rowHtml;
+          htmlMP.push(rowHtml);
           countMP++;
         }
       });
 
-      if (countMP === 0) {
-        tbodyMP.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-xs text-slate-400 font-bold">No hay materias primas registradas aún. Haz clic en "+ Agregar Materia Prima" para registrar una.</td></tr>`;
-      }
-      if (countMuestras === 0) {
-        tbodyMuestras.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-xs text-purple-400 font-bold">No hay productos de muestra registrados aún. Haz clic en "+ Agregar Producto de Muestra" para registrar uno.</td></tr>`;
-      }
-      if (countEmpaque === 0) {
-        tbodyEmpaque.innerHTML = `<tr><td colspan="9" class="text-center py-6 text-xs text-amber-600 font-bold">No hay materiales de empaque o embalaje registrados aún. Haz clic en "+ Agregar Material de Empaque" para registrar uno.</td></tr>`;
-      }
+      tbodyMP.innerHTML = htmlMP.length ? htmlMP.join('') : `<tr><td colspan="8" class="text-center py-6 text-xs text-slate-400 font-bold">No hay materias primas registradas aún. Haz clic en "+ Agregar Materia Prima" para registrar una.</td></tr>`;
+      tbodyMuestras.innerHTML = htmlMuestras.length ? htmlMuestras.join('') : `<tr><td colspan="8" class="text-center py-6 text-xs text-purple-400 font-bold">No hay productos de muestra registrados aún. Haz clic en "+ Agregar Producto de Muestra" para registrar uno.</td></tr>`;
+      tbodyEmpaque.innerHTML = htmlEmpaque.length ? htmlEmpaque.join('') : `<tr><td colspan="9" class="text-center py-6 text-xs text-amber-600 font-bold">No hay materiales de empaque o embalaje registrados aún. Haz clic en "+ Agregar Material de Empaque" para registrar uno.</td></tr>`;
     }
 
     async function fetchProducts() {
@@ -2849,17 +2863,18 @@
     let odooReceptions = [];
     let odooInvoices = [];
 
-    async function fetchOdooData() {
+    async function fetchOdooData(force = false) {
       const btnSync = document.getElementById('btn-sync-odoo');
-      if (btnSync) {
+      if (btnSync && force) {
         btnSync.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-purple-700"></i><span>Sincronizando...</span>`;
       }
       try {
+        const query = force ? '?force=1' : '';
         const [ordersRes, recRes, invRes, salesRes] = await Promise.all([
-          fetch(API_BASE + '/api/odoo/purchase-orders'),
+          fetch(API_BASE + '/api/odoo/purchase-orders' + query),
           fetch(API_BASE + '/api/odoo/receptions'),
-          fetch(API_BASE + '/api/odoo/invoices'),
-          fetch(API_BASE + '/api/odoo/sales-orders')
+          fetch(API_BASE + '/api/odoo/invoices' + query),
+          fetch(API_BASE + '/api/odoo/sales-orders' + query)
         ]);
         const ordersData = await ordersRes.json();
         const recData = await recRes.json();
