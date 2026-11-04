@@ -1037,15 +1037,18 @@ app.get('/api/odoo/status', async (req, res) => {
   }
 });
 
-// 2. Consultar Órdenes de Compra desde Odoo con partidas, entrega esperada y estatus de recepción local
+// 2. Consultar Órdenes de Compra desde Odoo con partidas, entrega esperada y estatus de recepción local (Noviembre 2026 en adelante)
 app.get('/api/odoo/purchase-orders', async (req, res) => {
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
   try {
-    // Consultar órdenes de compra activas y recientes
-    const orders = await executeOdoo('purchase.order', 'search_read', [[]], {
+    // Filtro estricto: órdenes de compra emitidas a partir del 1 de Noviembre de 2026
+    const filter = [
+      ['date_order', '>=', '2026-11-01 00:00:00']
+    ];
+    const orders = await executeOdoo('purchase.order', 'search_read', [filter], {
       fields: ['name', 'partner_id', 'date_order', 'date_planned', 'amount_total', 'amount_untaxed', 'state', 'order_line'],
       order: 'id desc',
-      limit: 25
+      limit: 30
     });
 
     if (!orders || orders.length === 0) {
@@ -1124,11 +1127,9 @@ app.get('/api/odoo/purchase-orders', async (req, res) => {
 app.get('/api/odoo/sales-orders', async (req, res) => {
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
   try {
-    // Filtro estricto: pedidos de clientes desde Noviembre 2026 en adelante o activos
+    // Filtro estricto: pedidos de clientes desde Noviembre 2026 en adelante
     const filter = [
-      '|',
-      ['date_order', '>=', '2026-11-01 00:00:00'],
-      ['state', 'in', ['sale', 'done']]
+      ['date_order', '>=', '2026-11-01 00:00:00']
     ];
     const orders = await executeOdoo('sale.order', 'search_read', [filter], {
       fields: ['name', 'partner_id', 'date_order', 'expected_date', 'commitment_date', 'amount_total', 'amount_untaxed', 'state', 'invoice_status', 'order_line'],
@@ -1351,21 +1352,11 @@ app.get('/api/odoo/invoices', async (req, res) => {
       ['date', '>=', '2026-11-01']
     ];
 
-    let invoices = await executeOdoo('account.move', 'search_read', [filter], {
+    const invoices = await executeOdoo('account.move', 'search_read', [filter], {
       fields: ['name', 'ref', 'partner_id', 'invoice_date', 'invoice_date_due', 'amount_total', 'amount_untaxed', 'state', 'payment_state', 'move_type'],
       order: 'id desc',
       limit: 30
     });
-
-    if (!invoices || invoices.length === 0) {
-      invoices = await executeOdoo('account.move', 'search_read', [
-        [['move_type', 'in', ['in_invoice', 'out_invoice']]]
-      ], {
-        fields: ['name', 'ref', 'partner_id', 'invoice_date', 'invoice_date_due', 'amount_total', 'amount_untaxed', 'state', 'payment_state', 'move_type'],
-        order: 'id desc',
-        limit: 25
-      });
-    }
 
     const formattedInvoices = (invoices || []).map(inv => {
       let paymentLabel = 'Pendiente de Pago';
