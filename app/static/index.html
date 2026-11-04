@@ -1026,17 +1026,51 @@
 
   <!-- Modal de Inicio de Sesión / Identificación de Operador -->
   <div id="modal-login" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[100] hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-sm w-full p-6 sm:p-7 space-y-5 shadow-2xl border border-pink-100 animate-in fade-in zoom-in duration-200">
-      <div class="text-center space-y-2">
-        <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-pink-100 text-aurani-magenta mb-1 shadow-inner">
-          <i class="fa-solid fa-shield-halved text-2xl"></i>
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 space-y-4 shadow-2xl border border-pink-100 animate-in fade-in zoom-in duration-200 max-h-[92vh] overflow-y-auto">
+      <div class="text-center space-y-1.5">
+        <div class="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-pink-100 text-aurani-magenta mb-1 shadow-inner">
+          <i class="fa-solid fa-shield-halved text-xl"></i>
         </div>
-        <h2 class="text-xl font-black text-slate-900 tracking-tight">Acceso al Sistema</h2>
-        <p class="text-xs text-slate-500">Ingresa tu correo institucional y contraseña para acceder a Planta Aurani.</p>
+        <h2 class="text-xl font-black text-slate-900 tracking-tight">Acceso a Planta Aurani</h2>
+        <p class="text-xs text-slate-500">Selecciona tu perfil de acceso rápido e ingresa tu contraseña obligatoria:</p>
       </div>
 
-      <!-- Formulario Login Manual Protegido -->
-      <form onsubmit="handleLoginSubmit(event)" class="space-y-4 pt-1">
+      <!-- Accesos Rápidos de Perfil (Seleccionan el usuario pero exigen contraseña por seguridad) -->
+      <div class="space-y-2">
+        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider text-center">Acceso Rápido por Perfil</label>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <!-- Botón Perfil Aura Ilse -->
+          <button type="button" onclick="selectQuickProfile('directora@aurani.mx', 'Aura Ilse Camargo Flores', this)" class="profile-card-btn text-left p-3 rounded-2xl border border-slate-200 bg-slate-50 hover:border-pink-300 hover:bg-pink-50/50 transition cursor-pointer shadow-xs group flex items-center space-x-3 active:scale-95">
+            <div class="w-10 h-10 rounded-xl bg-pink-100 text-aurani-magenta group-hover:bg-aurani-magenta group-hover:text-white flex items-center justify-center font-bold transition shrink-0 shadow-xs">
+              <i class="fa-solid fa-crown text-sm"></i>
+            </div>
+            <div class="min-w-0 flex-1">
+              <div class="text-xs font-black text-slate-900 group-hover:text-aurani-magenta truncate">Aura Ilse Camargo</div>
+              <div class="text-[10px] text-pink-700 font-semibold truncate">Directora General</div>
+            </div>
+          </button>
+
+          <!-- Botón Perfil Alejandra Alvarado -->
+          <button type="button" onclick="selectQuickProfile('almacen@aurani.mx', 'Ing. Alejandra Alvarado Reyes', this)" class="profile-card-btn text-left p-3 rounded-2xl border border-slate-200 bg-slate-50 hover:border-purple-300 hover:bg-purple-50/50 transition cursor-pointer shadow-xs group flex items-center space-x-3 active:scale-95">
+            <div class="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 group-hover:bg-purple-700 group-hover:text-white flex items-center justify-center font-bold transition shrink-0 shadow-xs">
+              <i class="fa-solid fa-boxes-stacked text-sm"></i>
+            </div>
+            <div class="min-w-0 flex-1">
+              <div class="text-xs font-black text-slate-900 group-hover:text-purple-700 truncate">Alejandra Alvarado</div>
+              <div class="text-[10px] text-purple-700 font-semibold truncate">Encargada de Almacén</div>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <div class="relative flex py-1 items-center">
+        <div class="flex-grow border-t border-slate-200"></div>
+        <span class="flex-shrink mx-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">O escribe tus datos</span>
+        <div class="flex-grow border-t border-slate-200"></div>
+      </div>
+
+      <!-- Formulario Login Seguro -->
+      <form onsubmit="handleLoginSubmit(event)" class="space-y-3.5">
         <div>
           <label class="block text-xs font-bold text-slate-700 mb-1">Correo Electrónico</label>
           <div class="relative">
@@ -1049,7 +1083,7 @@
 
         <div>
           <div class="flex justify-between items-center mb-1">
-            <label class="block text-xs font-bold text-slate-700">Contraseña</label>
+            <label class="block text-xs font-bold text-slate-700">Contraseña <span class="text-rose-500 font-bold">* (Obligatoria)</span></label>
             <button type="button" onclick="openSelfRecoverModal()" class="text-[11px] font-bold text-aurani-magenta hover:underline cursor-pointer">
               ¿Olvidaste tu contraseña?
             </button>
@@ -1058,7 +1092,7 @@
             <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 text-xs">
               <i class="fa-solid fa-lock"></i>
             </span>
-            <input type="password" id="login-password" required placeholder="••••••••" class="w-full pl-9 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:border-aurani-magenta outline-none transition font-medium">
+            <input type="password" id="login-password" required placeholder="Ingresa tu contraseña" autocomplete="current-password" class="w-full pl-9 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:border-aurani-magenta outline-none transition font-medium">
             <button type="button" onclick="togglePasswordVisibility('login-password', this)" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer" title="Mostrar/Ocultar contraseña">
               <i class="fa-solid fa-eye text-xs"></i>
             </button>
@@ -1073,7 +1107,7 @@
         </button>
 
         <!-- Registro de Nuevo Operador (Autoservicio) -->
-        <div class="pt-3 text-center border-t border-slate-100">
+        <div class="pt-2 text-center border-t border-slate-100">
           <p class="text-xs text-slate-500">
             ¿Eres nuevo operador y no tienes cuenta?
             <button type="button" onclick="openRegisterUserModal(true)" class="font-bold text-aurani-magenta hover:underline ml-1 cursor-pointer">
@@ -1418,11 +1452,50 @@
     function showLoginModal() {
       const modal = document.getElementById('modal-login');
       if (modal) modal.classList.remove('hidden');
+      const passInput = document.getElementById('login-password');
+      if (passInput) passInput.value = '';
+      const errBox = document.getElementById('login-error');
+      if (errBox) {
+        errBox.classList.add('hidden');
+        errBox.textContent = '';
+      }
+      document.querySelectorAll('.profile-card-btn').forEach(btn => {
+        btn.classList.remove('ring-2', 'ring-aurani-magenta', 'border-pink-500', 'bg-pink-50');
+        btn.classList.add('border-slate-200', 'bg-slate-50');
+      });
     }
 
     function hideLoginModal() {
       const modal = document.getElementById('modal-login');
       if (modal) modal.classList.add('hidden');
+    }
+
+    function selectQuickProfile(email, name, cardEl) {
+      document.querySelectorAll('.profile-card-btn').forEach(btn => {
+        btn.classList.remove('ring-2', 'ring-aurani-magenta', 'border-pink-500', 'bg-pink-50');
+        btn.classList.add('border-slate-200', 'bg-slate-50');
+      });
+
+      if (cardEl) {
+        cardEl.classList.remove('border-slate-200', 'bg-slate-50');
+        cardEl.classList.add('ring-2', 'ring-aurani-magenta', 'border-pink-500', 'bg-pink-50');
+      }
+
+      const emailInput = document.getElementById('login-email');
+      const passInput = document.getElementById('login-password');
+      const errBox = document.getElementById('login-error');
+
+      if (emailInput) emailInput.value = email;
+      if (passInput) {
+        passInput.value = ''; // Contraseña NUNCA prellenada, obligatoria
+        passInput.focus();
+      }
+
+      if (errBox) {
+        errBox.innerHTML = `<i class="fa-solid fa-lock text-aurani-magenta mr-1.5"></i> Perfil: <b>${name}</b>.<br><span class="text-slate-600 font-normal">Escribe tu contraseña confidencial para acceder.</span>`;
+        errBox.className = "text-xs text-slate-800 bg-pink-50/90 border border-pink-200 rounded-xl p-2.5 text-center font-semibold";
+        errBox.classList.remove('hidden');
+      }
     }
 
     function applyAuthenticatedUser(user, showToast = true) {
@@ -1488,7 +1561,21 @@
       const btn = document.getElementById('btn-login-submit');
       const errBox = document.getElementById('login-error');
 
-      if (!email || !password) return;
+      if (!email) {
+        errBox.textContent = 'Por favor selecciona un perfil o escribe tu correo electrónico.';
+        errBox.className = "text-xs text-rose-600 bg-rose-50 border border-rose-200 rounded-xl p-2.5 text-center font-semibold";
+        errBox.classList.remove('hidden');
+        document.getElementById('login-email')?.focus();
+        return;
+      }
+
+      if (!password) {
+        errBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation mr-1.5 text-rose-600"></i><b>Contraseña obligatoria:</b> Por favor escribe tu contraseña para ingresar.';
+        errBox.className = "text-xs text-rose-600 bg-rose-50 border border-rose-200 rounded-xl p-2.5 text-center font-semibold";
+        errBox.classList.remove('hidden');
+        document.getElementById('login-password')?.focus();
+        return;
+      }
 
       btn.disabled = true;
       btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>Verificando...</span>`;
