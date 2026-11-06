@@ -115,8 +115,12 @@ db.serialize(() => {
           seedProducts.forEach(p => {
             stmt.run([p.sku, p.name, p.category, p.stock_quantity, p.unlotified_stock, p.lotified_stock, p.min_stock, p.unit_price, p.expiration_date || '', p.supplier_name || '', p.batch_number || '', p.unit_of_measure || '']);
           });
-          stmt.finalize();
-          console.log(`✅ ${seedProducts.length} insumos cargados exitosamente.`);
+          stmt.finalize(() => {
+            console.log(`✅ ${seedProducts.length} insumos cargados exitosamente.`);
+            syncLowStockAlerts(() => {
+              console.log("✅ Alertas de stock crítico sincronizadas con el catálogo oficial.");
+            });
+          });
         } catch (e) {
           console.error("Error al cargar seed oficial:", e.message);
         }
@@ -204,7 +208,12 @@ db.serialize(() => {
             }
           });
         }
+        syncLowStockAlerts(() => {
+          console.log("✅ Alertas de stock crítico activas sincronizadas al iniciar el servidor.");
+        });
       });
+    } else {
+      syncLowStockAlerts();
     }
   });
 });
@@ -786,7 +795,8 @@ app.get('/api/audit-logs', (req, res) => {
 });
 
 // 7. Alertas de Stock Crítico (Sincronización limpia, respeto de ATENDIDA y sin duplicados)
-// Función para sincronizar alertas en memoria y aplicar operaciones atómicas sin saturar SQLite
+let lastAlertsSyncTime = 0;
+
 function syncLowStockAlerts(callback) {
   db.all(`SELECT id, sku, name, stock_quantity, min_stock FROM products`, (errProds, prods) => {
     if (errProds || !prods) return callback && callback();
@@ -805,11 +815,13 @@ function syncLowStockAlerts(callback) {
       prods.forEach(p => {
         const skuKey = (p.sku || '').trim().toLowerCase();
         prodsMap.set(skuKey, p);
-        const isCritical = p.stock_quantity <= p.min_stock;
+        const qty = parseFloat(p.stock_quantity) || 0;
+        const min = parseFloat(p.min_stock) || 0;
+        const isCritical = qty <= min;
         const existing = alertMap.get(skuKey);
 
         if (isCritical && !existing) {
-          toInsert.push(`¡ALERTA MÓVIL! Stock crítico en '${p.name}' (SKU: ${p.sku}). Disponibles: ${p.stock_quantity} (Mínimo: ${p.min_stock})`);
+          toInsert.push(`¡ALERTA MÓVIL! Stock crítico en '${p.name}' (SKU: ${p.sku}). Disponibles: ${qty} (Mínimo: ${min})`);
         } else if (!isCritical && existing) {
           toDeleteIds.push(existing.id);
         }
@@ -824,9 +836,11 @@ function syncLowStockAlerts(callback) {
         }
       });
 
-      if (toDeleteIds.length > 0) {
-        const placeholders = toDeleteIds.map(() => '?').join(',');
-        db.run(`DELETE FROM alerts WHERE id IN (${placeholders})`, toDeleteIds, () => {
+      const uniqueDeleteIds = Array.from(new Set(toDeleteIds));
+
+      if (uniqueDeleteIds.length > 0) {
+        const placeholders = uniqueDeleteIds.map(() => '?').join(',');
+        db.run(`DELETE FROM alerts WHERE id IN (${placeholders})`, uniqueDeleteIds, () => {
           insertNewAlerts();
         });
       } else {
@@ -835,12 +849,19 @@ function syncLowStockAlerts(callback) {
 
       function insertNewAlerts() {
         if (toInsert.length > 0) {
-          const stmt = db.prepare(`INSERT INTO alerts (alert_type, message, status) VALUES ('STOCK_BAJO', ?, 'PENDIENTE')`);
-          toInsert.forEach(msg => stmt.run([msg]));
-          stmt.finalize(() => {
-            if (callback) callback();
+          db.serialize(() => {
+            db.run('BEGIN TRANSACTION');
+            const stmt = db.prepare(`INSERT INTO alerts (alert_type, message, status) VALUES ('STOCK_BAJO', ?, 'PENDIENTE')`);
+            toInsert.forEach(msg => stmt.run([msg]));
+            stmt.finalize(() => {
+              db.run('COMMIT', () => {
+                lastAlertsSyncTime = Date.now();
+                if (callback) callback();
+              });
+            });
           });
         } else {
+          lastAlertsSyncTime = Date.now();
           if (callback) callback();
         }
       }
@@ -848,11 +869,22 @@ function syncLowStockAlerts(callback) {
   });
 }
 
-// 7. Alertas de Stock Crítico (Respuesta instantánea <2ms)
+// 7. Alertas de Stock Crítico (Auto-sincronización instantánea si está vacía o periódica)
 app.get('/api/alerts', (req, res) => {
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  const now = Date.now();
+
   db.all(`SELECT * FROM alerts ORDER BY id DESC`, (err, alerts) => {
     if (err) return res.status(500).json({ error: err.message });
+    // Si la tabla de alertas está vacía o pasaron más de 60 segundos desde la última sincronización:
+    if (!alerts || alerts.length === 0 || (now - lastAlertsSyncTime > 60000)) {
+      return syncLowStockAlerts(() => {
+        db.all(`SELECT * FROM alerts ORDER BY id DESC`, (err2, freshAlerts) => {
+          if (err2) return res.json(alerts || []);
+          res.json(freshAlerts || []);
+        });
+      });
+    }
     res.json(alerts || []);
   });
 });

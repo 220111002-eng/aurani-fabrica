@@ -2,7 +2,11 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Aurani Fábrica">
+  <meta name="format-detection" content="telephone=no">
   <title>Aurani 2.0 • Sistema Inteligente de Fábrica e Inventario</title>
   <!-- Tailwind CSS & FontAwesome & HTML5 QR/Barcode Scanner CDN & Google Fonts -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -931,14 +935,14 @@
   </div>
 
   <!-- Modal Escáner Código de Barras / QR -->
-  <div id="modal-barcode-scanner" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+  <div id="modal-barcode-scanner" onclick="if(event.target === this) closeBarcodeScannerModal()" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[150] hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-pink-100 animate-in fade-in zoom-in duration-200">
       <div class="flex justify-between items-center border-b border-pink-100 pb-3">
         <h3 class="text-base font-bold text-slate-800 flex items-center space-x-2">
           <i class="fa-solid fa-barcode text-aurani-magenta"></i>
           <span>Escanear Código de Barras / QR</span>
         </h3>
-        <button onclick="closeBarcodeScannerModal()" class="text-slate-400 hover:text-slate-600">
+        <button type="button" onclick="closeBarcodeScannerModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg cursor-pointer transition">
           <i class="fa-solid fa-xmark text-lg"></i>
         </button>
       </div>
@@ -951,7 +955,7 @@
 
       <div class="flex justify-between items-center pt-2 text-xs text-slate-500">
         <span class="flex items-center space-x-1"><i class="fa-solid fa-keyboard text-aurani-magenta"></i><span>Lector USB Físico Soportado</span></span>
-        <button onclick="closeBarcodeScannerModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-bold">
+        <button type="button" onclick="closeBarcodeScannerModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-bold cursor-pointer transition">
           Cerrar Escáner
         </button>
       </div>
@@ -1771,52 +1775,137 @@
     // --- ESCÁNER DE CÓDIGO DE BARRAS Y LECTOR USB ---
     let html5QrCode = null;
     let activeScanTargetInputId = null;
+    let isProcessingScan = false;
 
-    function openBarcodeScannerModal(targetInputId = null) {
+    async function openBarcodeScannerModal(targetInputId = null) {
       activeScanTargetInputId = targetInputId;
+      isProcessingScan = false;
+
       const modal = document.getElementById('modal-barcode-scanner');
+      const resultDiv = document.getElementById('scanner-result');
+      if (resultDiv) {
+        resultDiv.classList.add('hidden');
+        resultDiv.innerHTML = '';
+      }
+      modal.classList.remove('hidden');
+
+      // Limpiar instancia previa si existía
+      if (html5QrCode) {
+        const prevInstance = html5QrCode;
+        html5QrCode = null;
+        try {
+          if (prevInstance.isScanning) await prevInstance.stop();
+          prevInstance.clear();
+        } catch (e) {}
+      }
+
+      // Reinicializar contenedor #reader
+      const container = document.getElementById('barcode-reader-container');
+      if (container) {
+        container.innerHTML = '<div id="reader" class="w-full"></div>';
+      }
+
+      html5QrCode = new Html5Qrcode("reader");
+
+      const onScanSuccess = (decodedText) => {
+        if (!decodedText || typeof decodedText !== 'string') return;
+        const clean = decodedText.trim();
+        if (!clean || isProcessingScan) return;
+        isProcessingScan = true;
+
+        if (resultDiv) {
+          resultDiv.innerText = "✅ Código detectado: " + clean;
+          resultDiv.classList.remove('hidden');
+        }
+
+        setTimeout(() => {
+          handleScannedBarcode(clean, activeScanTargetInputId);
+        }, 300);
+      };
+
+      const qrConfig = {
+        fps: 10,
+        qrbox: function(viewfinderWidth, viewfinderHeight) {
+          const minDim = Math.min(viewfinderWidth, viewfinderHeight);
+          return {
+            width: Math.max(160, Math.floor(minDim * 0.75)),
+            height: Math.max(120, Math.floor(minDim * 0.65))
+          };
+        }
+      };
+
+      try {
+        await html5QrCode.start(
+          { facingMode: "environment" },
+          qrConfig,
+          onScanSuccess,
+          () => {} // Ignorar frames sin código
+        );
+      } catch (err1) {
+        console.warn("Fallo con facingMode environment, intentando lista de cámaras:", err1);
+        try {
+          const cameras = await Html5Qrcode.getCameras();
+          if (cameras && cameras.length > 0) {
+            const backCam = cameras.find(c => /back|rear|trasera|environment/i.test(c.label)) || cameras[cameras.length - 1];
+            await html5QrCode.start(
+              backCam.id,
+              qrConfig,
+              onScanSuccess,
+              () => {}
+            );
+          } else {
+            throw new Error("No se detectó cámara disponible.");
+          }
+        } catch (err2) {
+          console.error("No se pudo iniciar la cámara:", err2);
+          if (resultDiv) {
+            resultDiv.innerHTML = `
+              <div class="text-rose-700 bg-rose-50 border border-rose-200 rounded-xl p-3 text-xs space-y-2">
+                <div class="font-bold flex items-center justify-center gap-1.5">
+                  <i class="fa-solid fa-triangle-exclamation text-amber-500"></i> Acceso a Cámara No Disponible
+                </div>
+                <p class="text-[11px] text-slate-600 leading-relaxed">
+                  Si estás en iPhone/Safari, asegúrate de permitir el permiso de cámara. También puedes usar un <b>Lector USB físico</b> o ingresar el SKU manualmente.
+                </p>
+                <div class="pt-1">
+                  <button type="button" onclick="closeBarcodeScannerModal()" class="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 active:scale-95 text-slate-800 rounded-lg text-xs font-bold transition cursor-pointer">
+                    Cerrar Ventana
+                  </button>
+                </div>
+              </div>
+            `;
+            resultDiv.classList.remove('hidden');
+          }
+        }
+      }
+    }
+
+    async function closeBarcodeScannerModal() {
+      // 1. Cerrar el modal de inmediato para que NUNCA se quede trabado si se deniega acceso
+      const modal = document.getElementById('modal-barcode-scanner');
+      if (modal) modal.classList.add('hidden');
+
       const resultDiv = document.getElementById('scanner-result');
       if (resultDiv) {
         resultDiv.classList.add('hidden');
         resultDiv.innerText = '';
       }
-      modal.classList.remove('hidden');
 
-      if (!html5QrCode) {
-        html5QrCode = new Html5Qrcode("reader");
-      }
-
-      const config = { fps: 10, qrbox: { width: 250, height: 180 } };
-      html5QrCode.start(
-        { facingMode: "environment" },
-        config,
-        (decodedText) => {
-          if (resultDiv) {
-            resultDiv.innerText = "✅ Escaneado: " + decodedText;
-            resultDiv.classList.remove('hidden');
-          }
-          handleScannedBarcode(decodedText, activeScanTargetInputId);
-        },
-        (errorMessage) => {}
-      ).catch(err => {
-        console.warn("No se pudo iniciar cámara:", err);
-        if (resultDiv) {
-          resultDiv.innerText = "⚠️ No se pudo acceder a la cámara. Puedes usar un Lector USB físico o ingresar el SKU manualmente.";
-          resultDiv.classList.remove('hidden');
-        }
-      });
-    }
-
-    function closeBarcodeScannerModal() {
+      // 2. Detener cámara limpiamente
       if (html5QrCode) {
-        html5QrCode.stop().then(() => {
-          html5QrCode.clear();
-          html5QrCode = null;
-        }).catch(() => {
-          html5QrCode = null;
-        });
+        const qrInstance = html5QrCode;
+        html5QrCode = null;
+        try {
+          if (qrInstance.isScanning) {
+            await qrInstance.stop();
+          }
+        } catch (e) {
+          console.warn("Cámara ya detenida o no iniciada:", e);
+        }
+        try {
+          qrInstance.clear();
+        } catch (e) {}
       }
-      document.getElementById('modal-barcode-scanner').classList.add('hidden');
     }
 
     function playBeepSound() {
@@ -1835,19 +1924,22 @@
     }
 
     function handleScannedBarcode(scannedCode, targetInputId = null) {
+      if (!scannedCode || typeof scannedCode !== 'string' || !scannedCode.trim()) return;
       playBeepSound();
+      const code = scannedCode.trim();
+
       if (targetInputId) {
         const input = document.getElementById(targetInputId);
-        if (input) input.value = scannedCode;
+        if (input) input.value = code;
         closeBarcodeScannerModal();
         return;
       }
 
       const searchInput = document.getElementById('web-search-input');
-      if (searchInput) searchInput.value = scannedCode;
-      filterWebInventory(scannedCode);
+      if (searchInput) searchInput.value = code;
+      filterWebInventory(code);
 
-      const match = currentProducts.find(p => p.sku && p.sku.toLowerCase().trim() === scannedCode.toLowerCase().trim());
+      const match = currentProducts.find(p => p.sku && p.sku.toLowerCase().trim() === code.toLowerCase().trim());
       closeBarcodeScannerModal();
 
       if (match) {
@@ -1855,10 +1947,11 @@
           openEditModal(match.id);
         }, 300);
       } else {
-        if (confirm(`📷 Código de barras '${scannedCode}' escaneado.\n\nNo existe en el inventario. ¿Deseas darlo de alta ahora?`)) {
+        if (confirm(`📷 Código de barras '${code}' escaneado.\n\nNo existe en el inventario. ¿Deseas darlo de alta ahora?`)) {
           openAddProductModal('Materias Primas');
           setTimeout(() => {
-            document.getElementById('add-prod-sku').value = scannedCode;
+            const skuInput = document.getElementById('add-prod-sku');
+            if (skuInput) skuInput.value = code;
           }, 200);
         }
       }
